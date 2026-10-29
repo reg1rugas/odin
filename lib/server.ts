@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { seedWorkspace } from "./seed";
+import { DEFAULT_GEMINI_MODEL, resolveGeminiModel } from "./gemini-model";
 import { matchingActions, executionStatus } from "./workflow-engine";
 import type { Event, Workflow, Execution, Integration } from "./types";
 
@@ -75,7 +76,14 @@ export async function save(
   return data;
 }
 export async function ensureSeed(owner: string) {
-  if (await readOne(owner, "settings", "workspace")) return;
+  const existing = await readOne(owner, "settings", "workspace");
+  if (existing) {
+    const model = resolveGeminiModel(existing.model);
+    if (model !== existing.model) {
+      await save(owner, "settings", { ...existing, model });
+    }
+    return;
+  }
   const seed = seedWorkspace();
   const now = Date.now();
   const settings = {
@@ -85,7 +93,7 @@ export async function ensureSeed(owner: string) {
     voice: false,
     confidence: 0.65,
     retention: 30,
-    model: "gemini-2.5-flash",
+    model: DEFAULT_GEMINI_MODEL,
   };
   await env.DB!.batch([
     ...Object.entries(seed).flatMap(([kind, values]) =>
@@ -155,9 +163,7 @@ export async function gemini(
       428,
     );
   const settings = await readOne(owner, "settings", "workspace");
-  const model = /^[a-zA-Z0-9.-]+$/.test(settings?.model || "")
-    ? settings.model
-    : "gemini-2.5-flash";
+  const model = resolveGeminiModel(settings?.model);
   const parts: any[] = [{ text: prompt }];
   if (image) {
     const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(
@@ -189,7 +195,11 @@ export async function gemini(
     throw new ApiError(
       r.status === 429
         ? "Gemini rate limit reached. Wait a moment and try again."
-        : "Gemini could not complete this request. Check your API key and model in Settings.",
+        : r.status === 404
+          ? `Gemini model '${model}' is unavailable for this API key. Choose an available model in Settings → Intelligence.`
+          : r.status === 401 || r.status === 403
+            ? "Gemini rejected the API key or its permissions. Check your key and project access."
+            : "Gemini could not complete this request. Check your API key and model in Settings.",
       502,
     );
   const data: any = await r.json();

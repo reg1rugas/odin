@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { DEFAULT_GEMINI_MODEL } from "@/lib/gemini-model";
 import {
   Activity,
   ArrowDown,
@@ -1374,14 +1375,14 @@ export function SettingsPage() {
             </div>
             <Field
               label="Gemini model"
-              hint="Use a model available to your API key."
+              hint={`Default: ${DEFAULT_GEMINI_MODEL}. You can enter another model available to your API key.`}
             >
               <input
                 value={settings.model}
                 onChange={(e) =>
                   setSettings({ ...settings, model: e.target.value })
                 }
-                placeholder="gemini-2.5-flash"
+                placeholder={DEFAULT_GEMINI_MODEL}
               />
             </Field>
           </section>

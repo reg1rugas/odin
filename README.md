@@ -41,6 +41,8 @@ The first sign-in creates six clearly labeled sample camera previews, sample eve
 
 ## Provider setup
 
+The default AI model is `gemini-3.8-flash`. You can change it in **Settings → Intelligence → Gemini model**. Existing workspaces using the previous `gemini-2.5-flash` default are upgraded when loaded; custom model selections are preserved. Google restricts Gemini 2.5 models to previously active users, so they are unsuitable defaults for new API projects. Model availability also depends on your API key's project access.
+
 Object, face, and motion detection do not require an API key. The first use downloads the pinned browser libraries and model weights from their public hosts; internet access and a WebGL-capable browser are needed. Model loading errors appear in the viewer.
 
 A Gemini key can be entered in **Settings → Intelligence**. It stays in the React state of the current tab and is sent only to the same-origin backend; it is not saved to local storage, D1, source files, or logs. Alternatively, configure server runtime variables:

@@ -206,3 +206,22 @@ test("PDF xref offsets point to real objects and pagination is bounded", () => {
     assert.ok(pdf.slice(Number(s.slice(0, 10))).startsWith(`${i + 1} 0 obj`)),
   );
 });
+
+test("Gemini defaults and existing legacy settings use the current model", async () => {
+  const { DEFAULT_GEMINI_MODEL, resolveGeminiModel } =
+    await import("../lib/gemini-model.ts");
+  assert.equal(DEFAULT_GEMINI_MODEL, "gemini-3.8-flash");
+  for (const value of [
+    undefined,
+    null,
+    "",
+    "gemini-2.5-flash",
+    "invalid/model",
+  ]) {
+    assert.equal(resolveGeminiModel(value), DEFAULT_GEMINI_MODEL);
+  }
+  assert.equal(
+    resolveGeminiModel("gemini-3.5-flash-lite"),
+    "gemini-3.5-flash-lite",
+  );
+});
