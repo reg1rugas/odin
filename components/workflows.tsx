@@ -54,7 +54,8 @@ import {
   time,
 } from "./common";
 import { workflowSchema } from "@/lib/validation";
-import type { Workflow, FlowNode } from "@/lib/types";
+import { traceWorkflow } from "@/lib/workflow-engine";
+import type { Workflow, FlowNode, Event } from "@/lib/types";
 const actionNames: Record<string, string> = {
   browser: "Browser notification",
   voice: "Voice announcement",
@@ -301,9 +302,11 @@ function ArrowRightIcon() {
 export function WorkflowEditor({
   initial,
   compact = false,
+  activeEvent,
 }: {
   initial: Workflow;
   compact?: boolean;
+  activeEvent?: Event;
 }) {
   const { data, persist, notify, api, navigate, remove } = useOdin();
   const [flow, setFlow] = useState<Workflow>(() => structuredClone(initial)),
@@ -319,7 +322,11 @@ export function WorkflowEditor({
     [listening, setListening] = useState(false),
     [expanded, setExpanded] = useState(false),
     [rename, setRename] = useState(false),
-    [deleteFlow, setDeleteFlow] = useState(false);
+    [deleteFlow, setDeleteFlow] = useState(false),
+    [voiceDialog, setVoiceDialog] = useState(false);
+  const highlighted = new Set(
+    activeEvent ? traceWorkflow(flow, activeEvent, true) : [],
+  );
   const importRef = useRef<HTMLInputElement>(null),
     drag = useRef<{
       id: string;
@@ -374,7 +381,7 @@ export function WorkflowEditor({
       ...(type === "input"
         ? { cameraId: data!.cameras[0]?.id }
         : type === "rule"
-          ? { detectionClass: "person" }
+          ? { detectionClass: "person", ruleMode: "semantic" as const }
           : { action: "browser", cooldown: 60 }),
     };
     update({ ...flow, nodes: [...flow.nodes, node] });
@@ -530,15 +537,34 @@ export function WorkflowEditor({
               </div>
             )}
           </div>
+          <Button
+            className="graph-voice"
+            onClick={() => {
+              setVoiceDialog(true);
+              voice();
+            }}
+          >
+            <Mic size={13} />
+            Voice
+          </Button>
+          <Button
+            className="graph-save"
+            disabled={saving}
+            onClick={() => void saveFlow()}
+          >
+            <Save size={13} />
+            Save
+          </Button>
           <button
-            className="icon-btn"
+            className="icon-btn graph-import"
             title="Import JSON"
             onClick={() => importRef.current?.click()}
           >
             <Upload size={16} />
+            <span>Import</span>
           </button>
           <button
-            className="icon-btn"
+            className="icon-btn graph-download"
             title="Download JSON"
             onClick={() =>
               downloadJson(
@@ -548,14 +574,17 @@ export function WorkflowEditor({
             }
           >
             <Download size={16} />
+            <span>Download</span>
           </button>
           <button
-            className="icon-btn"
+            className="icon-btn graph-expand"
             title={expanded ? "Exit expanded view" : "Expand graph"}
             onClick={() => setExpanded((v) => !v)}
           >
             {expanded ? <Minimize size={16} /> : <Maximize size={16} />}
+            <span>{expanded ? "Shrink" : "Expand"}</span>
           </button>
+          <Button onClick={() => setZoom(compact ? 0.8 : 1)}>Home</Button>
           <input
             ref={importRef}
             type="file"
@@ -614,7 +643,7 @@ export function WorkflowEditor({
                 return (
                   <g
                     key={edge.id}
-                    className={selectedEdge === edge.id ? "selected" : ""}
+                    className={`${selectedEdge === edge.id ? "selected" : ""} ${highlighted.has(edge.source) && highlighted.has(edge.target) ? "executing" : ""}`}
                   >
                     <path
                       d={path}
@@ -643,7 +672,7 @@ export function WorkflowEditor({
               return (
                 <div
                   key={node.id}
-                  className={`flow-node ${node.type} ${connecting === node.id ? "connecting" : ""}`}
+                  className={`flow-node ${node.type} ${connecting === node.id ? "connecting" : ""} ${highlighted.has(node.id) ? "executing" : ""}`}
                   style={{ left: node.x, top: node.y }}
                   onDoubleClick={() => setEditing(node)}
                 >
@@ -921,6 +950,44 @@ export function WorkflowEditor({
           <ExecutionHistory workflowId={flow.id} />
         </>
       )}
+      {voiceDialog && (
+        <Modal
+          title="Describe your workflow"
+          subtitle="Speak or type the rule and response you want."
+          onClose={() => {
+            recognition.current?.stop();
+            setVoiceDialog(false);
+          }}
+        >
+          <Field label="Workflow instructions">
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="If someone leaves a bag unattended, show a browser alert…"
+            />
+          </Field>
+          <div className="modal-actions">
+            <Button onClick={voice}>
+              <Mic size={14} />
+              {listening ? "Stop listening" : "Start voice input"}
+            </Button>
+            <Button
+              variant="primary"
+              disabled={generating || prompt.length < 5}
+              onClick={async () => {
+                await generate();
+                setVoiceDialog(false);
+              }}
+            >
+              {generating ? (
+                <Spinner text="Building…" />
+              ) : (
+                "Build workflow draft"
+              )}
+            </Button>
+          </div>
+        </Modal>
+      )}
       {editing && (
         <NodeEditor
           node={editing}
@@ -1101,9 +1168,36 @@ function NodeEditor({
         )}
         {node.type === "rule" && (
           <>
+            <Field label="Evaluation mode">
+              <select
+                value={draft.ruleMode || "object"}
+                onChange={(e) => change("ruleMode", e.target.value)}
+              >
+                <option value="object">
+                  On-device object, face, or motion detection
+                </option>
+                <option value="semantic">
+                  AI scene understanding (description above)
+                </option>
+              </select>
+            </Field>
+            {draft.ruleMode === "semantic" && (
+              <div className="info-box">
+                <Sparkles size={18} />
+                <p>
+                  Odin evaluates this description against an ordered sequence of
+                  frames. Enable scene analysis in the camera viewer. A
+                  connected AI provider is required.
+                </p>
+              </div>
+            )}
             <Field
               label="Detection class"
-              hint="Rules match this class exactly. Advanced scene descriptions require Gemini frame analysis."
+              hint={
+                draft.ruleMode === "semantic"
+                  ? "Optional event category. Scene matching uses the description and AI evidence."
+                  : "Rules match this class exactly using on-device detections."
+              }
             >
               <select
                 value={draft.detectionClass || "person"}
@@ -1241,7 +1335,7 @@ function NodeEditor({
           <Button onClick={onClose}>Cancel</Button>
           <Button type="submit" variant="primary">
             <Check size={14} />
-            Apply changes
+            Save Changes
           </Button>
         </div>
       </form>

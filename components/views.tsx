@@ -148,7 +148,7 @@ export function IntegrationsPage() {
     <>
       <PageHeading
         eyebrow="BETTER, CONNECTED"
-        title="Integrations"
+        title="Integrated Tools"
         description="Connect what Odin sees to the tools you already use."
       >
         <Badge tone="lime">
@@ -446,7 +446,7 @@ export function ChatPage() {
     <>
       <PageHeading
         eyebrow="A NEW KIND OF CONVERSATION"
-        title="Camera chat"
+        title="Camera Chat"
         description="Ask your cameras. Connect the dots."
       >
         <Badge tone={aiKey || data!.capabilities.ai ? "purple" : "neutral"}>
@@ -704,7 +704,7 @@ export function ReportsPage() {
     <>
       <PageHeading
         eyebrow="CLARITY, ON THE RECORD"
-        title="Reports"
+        title="PDF Summary"
         description="Bring the important moments together. Share the bigger picture."
       >
         <Button variant="primary" onClick={() => setCreating(true)}>
@@ -1521,6 +1521,7 @@ export function TriggersPage() {
       title: string;
       description: string;
       detectionClass: string;
+      ruleMode: "object" | "semantic";
     } | null>(null),
     [busy, setBusy] = useState(false);
   const rules = data!.workflows
@@ -1549,6 +1550,7 @@ export function TriggersPage() {
                 title: editing.title,
                 description: editing.description,
                 detectionClass: editing.detectionClass,
+                ruleMode: editing.ruleMode,
               }
             : n,
         ),
@@ -1629,6 +1631,7 @@ export function TriggersPage() {
                       title: node.title,
                       description: node.description,
                       detectionClass: node.detectionClass || "person",
+                      ruleMode: node.ruleMode || "object",
                     })
                   }
                 >
@@ -1641,7 +1644,9 @@ export function TriggersPage() {
                 </small>
               </div>
               <Badge tone="orange">
-                {node.detectionClass || "Unconfigured"}
+                {node.ruleMode === "semantic"
+                  ? "AI scene rule"
+                  : node.detectionClass || "Unconfigured"}
               </Badge>
               <Badge tone={flow.enabled ? "lime" : "neutral"}>
                 {flow.enabled ? "Active" : "Paused"}
@@ -1668,8 +1673,9 @@ export function TriggersPage() {
         <div>
           <strong>One clear signal. The right response.</strong>
           <p>
-            Triggers evaluate the exact detection class in a recorded event.
-            Connect them to actions in a workflow. Only active workflows run.
+            Object triggers match event classes locally. Scene triggers use
+            their description and require enabled AI analysis. Connect triggers
+            to actions in an active workflow.
           </p>
         </div>
       </div>
@@ -1696,6 +1702,22 @@ export function TriggersPage() {
                   setEditing({ ...editing, description: e.target.value })
                 }
               />
+            </Field>
+            <Field label="Evaluation mode">
+              <select
+                value={editing.ruleMode}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    ruleMode: e.target.value as "object" | "semantic",
+                  })
+                }
+              >
+                <option value="object">
+                  On-device object, face, or motion detection
+                </option>
+                <option value="semantic">AI scene understanding</option>
+              </select>
             </Field>
             <Field label="Detection class">
               <select

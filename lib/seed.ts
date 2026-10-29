@@ -1,4 +1,5 @@
 import type { Camera, Event, Workflow } from "./types";
+import { demoCameras, demoWorkflow } from "./demo";
 const photos = [
   "photo-1586528116311-ad8dd3c8310d",
   "photo-1497366811353-6870744d04b2",
@@ -10,80 +11,7 @@ const photos = [
 const image = (id: string) => `/images/camera-${photos.indexOf(id) + 1}.jpg`;
 export function seedWorkspace() {
   const now = Date.now();
-  const cameras: Camera[] = [
-    {
-      id: "cam-001",
-      name: "Warehouse · Bay 01",
-      location: "North facility",
-      category: "Warehouse",
-      source: "demo",
-      url: "",
-      thumbnail: image("photo-1586528116311-ad8dd3c8310d"),
-      status: "online",
-      enabled: true,
-      createdAt: now,
-    },
-    {
-      id: "cam-002",
-      name: "Main entrance",
-      location: "Headquarters",
-      category: "Office",
-      source: "demo",
-      url: "",
-      thumbnail: image("photo-1497366811353-6870744d04b2"),
-      status: "online",
-      enabled: true,
-      createdAt: now,
-    },
-    {
-      id: "cam-003",
-      name: "Retail · Floor 01",
-      location: "Downtown store",
-      category: "Retail",
-      source: "demo",
-      url: "",
-      thumbnail: image("photo-1441986300917-64674bd600d8"),
-      status: "online",
-      enabled: true,
-      createdAt: now,
-    },
-    {
-      id: "cam-004",
-      name: "Production line",
-      location: "East facility",
-      category: "Industrial",
-      source: "demo",
-      url: "",
-      thumbnail: image("photo-1565043589221-1a6fd9ae45c7"),
-      status: "online",
-      enabled: true,
-      createdAt: now,
-    },
-    {
-      id: "cam-005",
-      name: "Parking · Zone A",
-      location: "Headquarters",
-      category: "Outdoor",
-      source: "demo",
-      url: "",
-      thumbnail: image("photo-1506521781263-d8422e82f27a"),
-      status: "online",
-      enabled: true,
-      createdAt: now,
-    },
-    {
-      id: "cam-006",
-      name: "Garden courtyard",
-      location: "West building",
-      category: "Outdoor",
-      source: "demo",
-      url: "",
-      thumbnail: image("photo-1416879595882-3373a0480b5b"),
-      status: "offline",
-      enabled: false,
-      createdAt: now,
-    },
-  ];
+  const cameras: Camera[] = demoCameras.map((c) => ({ ...c, createdAt: now }));
   const samples = [
     [
       "cam-001",
@@ -268,5 +196,9 @@ export function seedWorkspace() {
       ],
     },
   ];
-  return { cameras, events, workflows };
+  return {
+    cameras,
+    events,
+    workflows: [...workflows, ...cameras.map(demoWorkflow)],
+  };
 }

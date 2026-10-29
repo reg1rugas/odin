@@ -22,7 +22,13 @@ export async function POST(request: Request) {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
       acknowledged: false,
+      origin: "local",
     };
+    if (event.personId) {
+      const person = await readOne(u.userId, "faces", event.personId);
+      if (!person) throw new ApiError("Enrolled person not found.");
+      event.personName = person.name;
+    }
     await save(u.userId, "events", event);
     const executions = await runWorkflows(u.userId, event);
     return Response.json({ event, executions });

@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { EventSearch } from "./event-search";
 import {
   Camera as CameraIcon,
   Plus,
@@ -61,400 +62,123 @@ export function Dashboard({
   onCamera: (id: string) => void;
   onEvent: (id: string) => void;
 }) {
-  const { data, navigate, api, refresh, notify } = useOdin();
-  const d = data!;
-  const [query, setQuery] = useState(""),
-    [filter, setFilter] = useState("all"),
-    [layout, setLayout] = useState("grid"),
-    [category, setCategory] = useState("all");
-  const online = d.cameras.filter(
-    (c) => c.status === "online" && c.enabled,
-  ).length;
-  const active = d.workflows.filter((f) => f.enabled).length;
-  const today = new Date().setHours(0, 0, 0, 0);
-  const todayEvents = d.events.filter((e) => e.timestamp >= today);
-  const filtered = d.cameras.filter(
-    (c) =>
-      (filter === "all" ||
-        (filter === "online" && c.status === "online" && c.enabled) ||
-        (filter === "offline" && (c.status === "offline" || !c.enabled))) &&
-      (category === "all" || c.category === category) &&
-      `${c.name} ${c.location}`.toLowerCase().includes(query.toLowerCase()),
+  const { data, navigate } = useOdin();
+  const [query, setQuery] = useState("");
+  const cameras = data!.cameras.filter((c) =>
+    `${c.name} ${c.location}`.toLowerCase().includes(query.toLowerCase()),
   );
-  const events = [...d.events].sort((a, b) => b.timestamp - a.timestamp);
-  const stats = [
-    {
-      label: "Total cameras",
-      value: d.cameras.length,
-      icon: CameraIcon,
-      note: `${online} online`,
-      color: "lime",
-      trend: "Connected sources",
-    },
-    {
-      label: "Events today",
-      value: todayEvents.length,
-      icon: Activity,
-      note: `${todayEvents.filter((e) => !e.acknowledged).length} to review`,
-      color: "blue",
-      trend: "Across all cameras",
-    },
-    {
-      label: "Active workflows",
-      value: active,
-      icon: Workflow,
-      note: `${d.workflows.length} configured`,
-      color: "purple",
-      trend: "Intelligence in action",
-    },
-    {
-      label: "System health",
-      value: d.cameras.length
-        ? `${Math.round((online / d.cameras.length) * 100)}%`
-        : "—",
-      icon: ShieldCheck,
-      note:
-        online === d.cameras.length
-          ? "All online"
-          : `${d.cameras.length - online} offline`,
-      color: "orange",
-      trend: "Camera availability",
-    },
-  ];
   return (
-    <>
-      <PageHeading
-        eyebrow="YOUR WORLD, IN VIEW"
-        title="Camera overview"
-        description="A little more awareness. A lot more peace of mind."
-      >
-        <span className="operational">
-          <span className="status-dot" />
-          System operational
+    <div className="camera-dashboard">
+      <div className="classic-heading">
+        <h1>Camera Dashboard</h1>
+        <div>
+          <button
+            className="btn secondary"
+            onClick={() => navigate("activity")}
+          >
+            Search recordings <Search size={14} />
+          </button>
+          <button
+            className="btn secondary"
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent("odin-monitor-cameras"))
+            }
+          >
+            <Radio size={14} />
+            Monitor cameras
+          </button>
+          <button className="btn primary" onClick={onAdd}>
+            <Plus size={15} />
+            Add New Camera
+          </button>
+        </div>
+      </div>
+      <div className="classic-camera-tools">
+        <div className="search-input">
+          <Search size={14} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search cameras…"
+            aria-label="Search cameras"
+          />
+        </div>
+        <span>
+          {cameras.length} cameras ·{" "}
+          {data!.workflows.filter((f) => f.enabled).length} active workflows
         </span>
-        <Button variant="primary" onClick={onAdd}>
-          <Plus size={16} />
-          Add camera
-        </Button>
-      </PageHeading>
-      <div className="stats-grid">
-        {stats.map((s, i) => (
-          <div className="stat-card" key={s.label}>
-            <div className="stat-top">
-              <span>{s.label}</span>
-              <s.icon size={17} className={`text-${s.color}`} />
-            </div>
-            <div className="stat-value">
-              {s.value}
-              <span className={`stat-note ${s.color}`}>
-                <span className="mini-dot" />
-                {s.note}
-              </span>
-            </div>
-            <div className="stat-bottom">
-              <span>{s.trend}</span>
-              <svg className={`sparkline ${s.color}`} viewBox="0 0 100 25">
-                <path
-                  d={
-                    i === 0
-                      ? "M0 22L13 22L13 16L28 16L28 20L40 20L40 12L58 12L58 15L73 15L73 6L85 6L85 3L100 3"
-                      : i === 1
-                        ? "M0 20L10 17L20 21L28 12L35 17L43 10L53 13L64 6L73 11L82 5L90 8L100 2"
-                        : i === 2
-                          ? "M0 20L20 20L20 15L45 15L45 15L60 15L60 9L80 9L80 4L100 4"
-                          : "M0 7L10 7L15 12L20 4L26 7L40 7L44 12L50 3L56 7L80 7L88 3L94 7L100 7"
-                  }
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
+      </div>
+      <div className="classic-camera-grid">
+        {cameras.map((camera) => (
+          <article className="classic-camera-card" key={camera.id}>
+            <button
+              className="classic-camera-title"
+              onClick={() => onCamera(camera.id)}
+            >
+              <CameraIcon size={15} />
+              <strong>{camera.name}</strong>
+              <ArrowUpRight size={14} />
+            </button>
+            <p>{camera.location}</p>
+            <button
+              className="classic-camera-feed"
+              onClick={() => onCamera(camera.id)}
+              aria-label={`Open ${camera.name}`}
+            >
+              {camera.url && camera.source !== "webcam" ? (
+                <video
+                  src={camera.url}
+                  poster={camera.thumbnail}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
                 />
-              </svg>
+              ) : camera.thumbnail ? (
+                <img src={camera.thumbnail} alt={camera.name} />
+              ) : (
+                <span className="camera-placeholder">
+                  <Webcam size={35} />
+                  Open camera to start monitoring
+                </span>
+              )}
+              <span className="classic-feed-tag">
+                {camera.source === "demo"
+                  ? "DEMO FOOTAGE"
+                  : camera.source === "webcam"
+                    ? "DEVICE CAMERA"
+                    : "VIDEO SOURCE"}
+              </span>
+              <span className="classic-camera-play">
+                <Play size={28} />
+              </span>
+            </button>
+            <div className="classic-camera-status">
+              <span className="status-dot" />
+              {camera.source === "demo"
+                ? "Recorded demo · annotations included"
+                : "Ready to monitor"}
+              <button onClick={() => onCamera(camera.id)}>
+                Open <ChevronRight size={13} />
+              </button>
             </div>
-          </div>
+          </article>
         ))}
       </div>
-      <div className="dashboard-columns">
-        <section className="camera-section">
-          <div className="section-toolbar">
-            <div className="tabs">
-              <button
-                className={filter === "all" ? "selected" : ""}
-                onClick={() => setFilter("all")}
-              >
-                All cameras <span>{d.cameras.length}</span>
-              </button>
-              <button
-                className={filter === "online" ? "selected" : ""}
-                onClick={() => setFilter("online")}
-              >
-                <span className="mini-dot green" />
-                Online <span>{online}</span>
-              </button>
-              <button
-                className={filter === "offline" ? "selected" : ""}
-                onClick={() => setFilter("offline")}
-              >
-                Offline <span>{d.cameras.length - online}</span>
-              </button>
-            </div>
-            <div className="view-switch">
-              <button
-                className={layout === "grid" ? "selected" : ""}
-                aria-label="Grid view"
-                onClick={() => setLayout("grid")}
-              >
-                <LayoutGrid size={16} />
-              </button>
-              <button
-                className={layout === "list" ? "selected" : ""}
-                aria-label="List view"
-                onClick={() => setLayout("list")}
-              >
-                <List size={17} />
-              </button>
-            </div>
-          </div>
-          <div className="filter-toolbar">
-            <div className="search-input">
-              <Search size={15} />
-              <input
-                aria-label="Search cameras"
-                placeholder="Search cameras…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-            <div className="select-wrap">
-              <SlidersHorizontal size={14} />
-              <select
-                aria-label="Filter locations"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              >
-                <option value="all">All categories</option>
-                {[...new Set(d.cameras.map((c) => c.category))].map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div
-            className={`camera-grid ${layout === "list" ? "list-view" : ""}`}
-          >
-            {filtered.map((camera, i) => {
-              const count = d.events.filter(
-                (e) => e.cameraId === camera.id,
-              ).length;
-              const on = camera.status === "online" && camera.enabled;
-              return (
-                <article
-                  className={`camera-card ${!on ? "offline" : ""}`}
-                  key={camera.id}
-                >
-                  <button
-                    className="camera-preview"
-                    onClick={() => onCamera(camera.id)}
-                    aria-label={`Open ${camera.name}`}
-                  >
-                    <img
-                      src={
-                        camera.thumbnail || `/images/camera-${(i % 6) + 1}.jpg`
-                      }
-                      alt={camera.name}
-                      onError={(e) => {
-                        e.currentTarget.src = "/images/camera-1.jpg";
-                      }}
-                    />
-                    <div className="camera-image-shade" />
-                    <div className="feed-top">
-                      <span className={`feed-badge ${on ? "" : "off"}`}>
-                        <span />
-                        {on
-                          ? camera.source === "demo"
-                            ? "PREVIEW"
-                            : "CONNECTED"
-                          : "OFFLINE"}
-                      </span>
-                      <span className="camera-id">
-                        {camera.id.startsWith("cam-")
-                          ? camera.id.toUpperCase()
-                          : `CAM-${String(i + 1).padStart(3, "0")}`}
-                      </span>
-                    </div>
-                    {on && camera.source === "demo" && (
-                      <>
-                        <div className="sample-watermark">SAMPLE FEED</div>
-                        {i < 3 && (
-                          <div className={`detection-box box-${i}`}>
-                            <span>
-                              {i === 0
-                                ? "person 97%"
-                                : i === 1
-                                  ? "person 99%"
-                                  : "person 94%"}
-                            </span>
-                            <i />
-                            <i />
-                            <i />
-                            <i />
-                          </div>
-                        )}
-                      </>
-                    )}
-                    {!on ? (
-                      <div className="offline-message">
-                        <Video size={24} />
-                        <span>Camera is offline</span>
-                      </div>
-                    ) : (
-                      <span className="preview-open">
-                        <Maximize size={18} />
-                      </span>
-                    )}
-                    <div className="feed-bottom">
-                      <span>
-                        <span className="record-dot" />
-                        {camera.source === "demo"
-                          ? "DEMO"
-                          : camera.source === "webcam"
-                            ? "DEVICE"
-                            : "VIDEO"}{" "}
-                        <span>·</span>{" "}
-                        {camera.source === "demo"
-                          ? "1920 × 1080"
-                          : "Open to monitor"}
-                      </span>
-                      <Signal size={12} />
-                    </div>
-                  </button>
-                  <div className="camera-info">
-                    <button onClick={() => onCamera(camera.id)}>
-                      <h3>{camera.name}</h3>
-                      <p>
-                        <MapPin size={12} />
-                        {camera.location}
-                      </p>
-                    </button>
-                    <button
-                      className="icon-btn"
-                      aria-label={`View ${camera.name} details`}
-                      onClick={() => onCamera(camera.id)}
-                    >
-                      <ChevronRight size={17} />
-                    </button>
-                  </div>
-                  <div className="camera-card-footer">
-                    <span>
-                      <span className={`status-dot ${on ? "" : "gray"}`} />
-                      {on ? "Monitoring enabled" : "Not monitoring"}
-                    </span>
-                    <span>
-                      <Activity size={12} />
-                      {count} events
-                    </span>
-                  </div>
-                </article>
-              );
-            })}
-            {!filtered.length && (
-              <Empty
-                title="No cameras found"
-                text="Try another search or add a camera."
-                action={
-                  <Button onClick={onAdd}>
-                    <Plus size={15} />
-                    Add camera
-                  </Button>
-                }
-              />
-            )}
-          </div>
-          <div className="camera-grid-caption">
-            <span>
-              Showing {filtered.length} of {d.cameras.length} cameras
-            </span>
-            <span>
-              <ShieldCheck size={12} />
-              Your feeds stay private
-            </span>
-          </div>
-          <div className="intelligence-banner">
-            <span className="banner-icon">
-              <Workflow size={24} />
-            </span>
-            <div>
-              <h3>Let your cameras do more.</h3>
-              <p>Turn what you see into what happens next.</p>
-            </div>
-            <Button onClick={() => navigate("workflows")}>
-              Build a workflow <ArrowUpRight size={15} />
+      {!cameras.length && (
+        <Empty
+          title="No cameras found"
+          text="Add a webcam, video file, or video URL to start."
+          action={
+            <Button onClick={onAdd}>
+              <Plus size={15} />
+              Add New Camera
             </Button>
-            <div className="banner-decoration">
-              <Eye size={100} />
-            </div>
-          </div>
-        </section>
-        <aside className="activity-panel">
-          <div className="panel-title">
-            <h2>
-              <span className="pulse-circle" />
-              Recent activity
-            </h2>
-            <Badge tone="lime">
-              {events.filter((e) => !e.acknowledged).length} new
-            </Badge>
-          </div>
-          <p className="panel-subtitle">The moments that matter.</p>
-          <div className="activity-timeline">
-            {events.slice(0, 5).map((e) => (
-              <EventRow
-                compact
-                key={e.id}
-                event={e}
-                camera={d.cameras.find((c) => c.id === e.cameraId)}
-                onClick={() => onEvent(e.id)}
-              />
-            ))}
-          </div>
-          <button className="view-all" onClick={() => navigate("activity")}>
-            View all activity <ArrowRight size={14} />
-          </button>
-          <div className="activity-insight">
-            <span className="insight-icon">
-              <Eye size={19} />
-            </span>
-            <Badge tone="purple">ODIN INSIGHT</Badge>
-            <h3>Awareness starts here.</h3>
-            <p>
-              Connect your first live camera to turn real-world moments into
-              useful insights.
-            </p>
-            <button onClick={onAdd}>
-              Connect a camera <ArrowUpRight size={14} />
-            </button>
-            <div className="insight-rings">
-              <i />
-              <i />
-              <i />
-            </div>
-          </div>
-          <div className="activity-legend">
-            <span>
-              <i className="critical" />
-              Critical
-            </span>
-            <span>
-              <i className="warning" />
-              Warning
-            </span>
-            <span>
-              <i className="info" />
-              Information
-            </span>
-          </div>
-        </aside>
-      </div>
-    </>
+          }
+        />
+      )}
+    </div>
   );
 }
 export function CameraForm({
@@ -774,6 +498,7 @@ export function ActivityPage({ onEvent }: { onEvent: (id: string) => void }) {
           {busy ? "Reviewing…" : "Mark all reviewed"}
         </Button>
       </PageHeading>
+      <EventSearch />
       <div className="activity-stats">
         {["critical", "warning", "info"].map((s) => (
           <button

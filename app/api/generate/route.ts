@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     if (ai) {
       flow = await gemini(
         u.userId,
-        `Create a JSON camera workflow from the user description. Output {name,description,nodes,edges}. Node format: {id,type:'input'|'rule'|'action',title,description,x,y,cameraId?,detectionClass?,action?,destination?,cooldown?}. Edge format {id,source,target}. Include input node with cameraId '${camera.id}' at x:60,y:150; rules x:360; actions x:680. Supported classes: person,car,backpack,handbag,dog,cat,truck,bicycle,unknown_face,known_face,motion,* . Actions: browser,voice,email,sms,call,webhook,mcp. Never invent destination addresses, credentials or integrations. Default to browser action if no destination specified. Rules only match exact detectionClass, never time or advanced conditions. Do not claim time restrictions are enforced. Keep description honest about implemented rule. User description: ${prompt}`,
+        `Create a JSON camera workflow from the user description. Output {name,description,nodes,edges}. Node format: {id,type:'input'|'rule'|'action',title,description,x,y,cameraId?,detectionClass?,ruleMode?:'object'|'semantic',action?,destination?,cooldown?}. Edge format {id,source,target}. Include input node with cameraId '${camera.id}' at x:60,y:150; rules x:360; actions x:680. Supported classes: person,car,backpack,handbag,dog,cat,truck,bicycle,unknown_face,known_face,motion,* . Actions: browser,voice,email,sms,call,webhook,mcp. Never invent destination addresses, credentials or integrations. Default to browser action if no destination specified. Use ruleMode object for exact object classes. Use ruleMode semantic for visible scene conditions such as an unattended bag or a physical struggle; these are evaluated against short frame sequences by AI. Semantic rules require continuous or manual AI analysis. Time schedules are not supported. Do not claim time restrictions are enforced. Keep description honest about implemented rule. User description: ${prompt}`,
         request,
         undefined,
         true,
@@ -45,9 +45,15 @@ export async function POST(request: Request) {
                 : lower.includes("unknown")
                   ? "unknown_face"
                   : "person";
+      const semantic =
+        /fight|steal|unattend|fall|loiter|struggle|pick.*up|left.*bag/i.test(
+          prompt,
+        );
       flow = {
         name: `${cls.charAt(0).toUpperCase() + cls.slice(1)} detection`,
-        description: `Detect ${cls} and notify in the browser. Generated from a detection template; additional conditions in the prompt require manual configuration.`,
+        description: semantic
+          ? "AI scene rule draft. Connect an AI provider and enable scene analysis to evaluate this condition."
+          : `Detect ${cls} and notify in the browser. Generated from a detection template.`,
         nodes: [
           {
             id: "input",
@@ -64,6 +70,7 @@ export async function POST(request: Request) {
             title: `Detect ${cls}`,
             description: prompt,
             detectionClass: cls,
+            ruleMode: semantic ? "semantic" : "object",
             x: 360,
             y: 150,
           },

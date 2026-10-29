@@ -1,8 +1,13 @@
 import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { seedWorkspace } from "./seed";
+import { requestGemini, GeminiRequestError } from "./gemini-request";
 import { DEFAULT_GEMINI_MODEL, resolveGeminiModel } from "./gemini-model";
-import { matchingActions, executionStatus } from "./workflow-engine";
+import {
+  matchingActions,
+  executionStatus,
+  traceWorkflow,
+} from "./workflow-engine";
 import type { Event, Workflow, Execution, Integration } from "./types";
 
 export class ApiError extends Error {
@@ -153,7 +158,7 @@ export async function gemini(
   owner: string,
   prompt: string,
   request?: Request,
-  image?: string,
+  image?: string | { image: string; at: number }[],
   json = false,
 ) {
   const key = request?.headers.get("x-odin-ai-key") || secret("GEMINI_API_KEY");
@@ -166,48 +171,29 @@ export async function gemini(
   const model = resolveGeminiModel(settings?.model);
   const parts: any[] = [{ text: prompt }];
   if (image) {
-    const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(
-      image,
-    );
-    if (!match || image.length > 1_500_000)
-      throw new ApiError("Use a JPEG, PNG, or WebP frame under 1 MB.");
-    parts.push({
-      inline_data: { mime_type: `image/${match[1]}`, data: match[2] },
-    });
+    const frames = typeof image === "string" ? [{ image, at: 0 }] : image;
+    if (frames.length > 6)
+      throw new ApiError("Use at most six frames per analysis.");
+    for (const frame of frames) {
+      const match =
+        /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(
+          frame.image,
+        );
+      if (!match || frame.image.length > 1_500_000)
+        throw new ApiError("Use a JPEG, PNG, or WebP frame under 1 MB.");
+      parts.push({ text: `Camera time: ${frame.at.toFixed(2)} seconds.` });
+      parts.push({
+        inline_data: { mime_type: `image/${match[1]}`, data: match[2] },
+      });
+    }
   }
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 4096,
-          ...(json ? { responseMimeType: "application/json" } : {}),
-        },
-      }),
-      signal: AbortSignal.timeout(45000),
-    },
-  );
-  if (!r.ok)
-    throw new ApiError(
-      r.status === 429
-        ? "Gemini rate limit reached. Wait a moment and try again."
-        : r.status === 404
-          ? `Gemini model '${model}' is unavailable for this API key. Choose an available model in Settings → Intelligence.`
-          : r.status === 401 || r.status === 403
-            ? "Gemini rejected the API key or its permissions. Check your key and project access."
-            : "Gemini could not complete this request. Check your API key and model in Settings.",
-      502,
-    );
-  const data: any = await r.json();
-  const result = data.candidates?.[0]?.content?.parts
-    ?.map((p: any) => p.text || "")
-    .join("");
-  if (!result) throw new ApiError("The AI provider returned no response.", 502);
-  return json ? JSON.parse(result) : result;
+  try {
+    return await requestGemini({ model, key, parts, json });
+  } catch (error) {
+    if (error instanceof GeminiRequestError)
+      throw new ApiError(error.message, error.status);
+    throw error;
+  }
 }
 export async function mcpRequest(
   endpoint: string,
@@ -449,6 +435,7 @@ export async function runWorkflows(owner: string, event: Event) {
       workflowName: flow.name,
       eventId: event.id,
       eventTitle: event.title,
+      visitedNodes: traceWorkflow(flow, event),
       timestamp: Date.now(),
       status: "success",
       results: [],

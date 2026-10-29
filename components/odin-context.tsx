@@ -30,6 +30,16 @@ type AppContext = {
   navigate: (page: Page, id?: string) => void;
   page: Page;
   selectedId: string;
+  seekTo: { cameraId: string; time: number } | null;
+  setSeekTo: (value: { cameraId: string; time: number } | null) => void;
+  monitoringIds: string[];
+  setMonitoringIds: (ids: string[]) => void;
+  monitorAi: boolean;
+  setMonitorAi: (value: boolean) => void;
+  monitorFaces: boolean;
+  setMonitorFaces: (value: boolean) => void;
+  recordClips: boolean;
+  setRecordClips: (value: boolean) => void;
   aiKey: string;
   setAiKey: (v: string) => void;
   persist: (kind: string, data: any) => Promise<void>;
@@ -42,6 +52,14 @@ export function useOdinState() {
   const [data, setData] = useState<Workspace | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState("");
+  const [monitoringIds, setMonitoringIds] = useState<string[]>([]),
+    [monitorAi, setMonitorAi] = useState(false),
+    [monitorFaces, setMonitorFaces] = useState(false),
+    [recordClips, setRecordClips] = useState(false);
+  const [seekTo, setSeekTo] = useState<{
+    cameraId: string;
+    time: number;
+  } | null>(null);
   const [page, setPage] = useState<Page>("cameras"),
     [selectedId, setSelectedId] = useState(""),
     [aiKey, setAiKey] = useState("");
@@ -65,7 +83,11 @@ export function useOdinState() {
         ...(body ? { body: JSON.stringify(body) } : {}),
       });
       const result: any = await r.json();
-      if (!r.ok) throw new Error(result.error || "Request failed.");
+      if (!r.ok) {
+        const error = new Error(result.error || "Request failed.");
+        Object.assign(error, { status: r.status });
+        throw error;
+      }
       return result;
     },
     [aiKey],
@@ -194,6 +216,16 @@ export function useOdinState() {
       navigate,
       page,
       selectedId,
+      monitoringIds,
+      setMonitoringIds,
+      monitorAi,
+      setMonitorAi,
+      monitorFaces,
+      setMonitorFaces,
+      recordClips,
+      setRecordClips,
+      seekTo,
+      setSeekTo,
       aiKey,
       setAiKey,
       persist,

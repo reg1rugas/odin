@@ -23,6 +23,7 @@ export const nodeSchema = z.object({
   y: z.number().min(-5000).max(10000),
   cameraId: id.optional(),
   detectionClass: z.string().max(80).optional(),
+  ruleMode: z.enum(["object", "semantic"]).optional(),
   action: z
     .enum(["browser", "voice", "email", "sms", "call", "webhook", "mcp"])
     .optional(),
@@ -135,4 +136,9 @@ export const eventInput = z.object({
   type: short,
   confidence: z.number().min(0).max(1),
   snapshot: z.string().max(300000).optional(),
+  sourceTime: z.number().finite().min(0).optional(),
+  sessionId: id.optional(),
+  personId: id.optional(),
+  personName: z.string().max(160).optional(),
+  trackId: id.optional(),
 });

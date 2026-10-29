@@ -1,0 +1,1740 @@
+/* Dense monitoring workspace: video, events, and graph remain the primary surfaces. */
+.reference-ui {
+  --bg: #111827;
+  --sidebar: #1f2937;
+  --surface: #1f2937;
+  --border: #374151;
+  --border-soft: #303b4b;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --lime: #60a5fa;
+  --lime-bg: #253c58;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  background: var(--bg);
+}
+.reference-ui h1,
+.reference-ui h2,
+.reference-ui h3,
+.reference-ui h4 {
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: 0;
+}
+.reference-ui .sidebar {
+  width: 174px;
+  padding: 20px 0 0;
+  background: #1f2937;
+  border-right: 1px solid #263143;
+}
+.reference-ui .brand {
+  font-family: Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin: 0 20px 34px;
+  gap: 0;
+}
+.reference-ui .brand-mark,
+.reference-ui .brand-tag,
+.reference-ui .workspace-switch,
+.reference-ui .nav-label,
+.reference-ui .system-card,
+.reference-ui .profile,
+.reference-ui .nav-spark {
+  display: none;
+}
+.reference-ui .nav-group {
+  margin-bottom: 0;
+}
+.reference-ui .nav-item {
+  border-radius: 0;
+  padding: 12px 16px;
+  font-size: 12px;
+  gap: 12px;
+  margin: 0;
+  font-weight: 400;
+  color: #9ca3af;
+}
+.reference-ui .nav-item > svg {
+  width: 16px;
+  height: 16px;
+}
+.reference-ui .nav-item.active {
+  background: #374151;
+  color: #e5e7eb;
+}
+.reference-ui .nav-item.active:before {
+  display: none;
+}
+.reference-ui .nav-item:hover {
+  background: #303c4c;
+}
+.reference-ui .nav-count {
+  background: #4b5563;
+  color: #d1d5db;
+  font-size: 9px;
+}
+.reference-ui .sidebar-bottom {
+  margin-top: auto;
+  padding: 20px 0;
+}
+.reference-ui .main-shell {
+  margin-left: 174px;
+}
+.reference-ui .topbar {
+  display: none;
+}
+.reference-ui .content {
+  padding: 20px;
+  max-width: none;
+  margin: 0;
+  width: 100%;
+}
+.reference-ui .app-footer {
+  display: none;
+}
+.reference-ui .classic-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 18px;
+}
+.reference-ui .classic-heading h1 {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.reference-ui .classic-heading p {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+.reference-ui .classic-heading > div:last-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.reference-ui .btn {
+  font-family: Arial, sans-serif;
+  border-radius: 5px;
+  padding: 8px 11px;
+  background: #4b5563;
+  border-color: #4b5563;
+  font-size: 11px;
+  min-height: 31px;
+  color: #f3f4f6;
+  box-shadow: none;
+}
+.reference-ui .btn:hover {
+  filter: brightness(1.12);
+}
+.reference-ui .btn.primary {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: white;
+}
+.reference-ui .btn.danger {
+  background: #991b1b;
+  border-color: #991b1b;
+  color: white;
+}
+.reference-ui .btn.ghost {
+  background: transparent;
+  border-color: transparent;
+}
+.reference-ui .surface {
+  background: #1f2937;
+  border-color: #374151;
+  border-radius: 5px;
+}
+.reference-ui .surface > .panel-title {
+  padding: 13px 14px;
+  border-bottom: 0;
+}
+.reference-ui .panel-title h2 {
+  font-size: 13px;
+  font-weight: 600;
+  gap: 7px;
+}
+.reference-ui .panel-title small {
+  font-weight: 400;
+  font-size: 10px;
+  color: #9ca3af;
+}
+.reference-ui .badge {
+  font-size: 9px;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+.reference-ui .badge.lime {
+  background: #153c2b;
+  color: #86efac;
+}
+.reference-ui .badge.warning,
+.reference-ui .badge.orange {
+  background: #453e24;
+  color: #fde68a;
+}
+.reference-ui .badge.critical {
+  background: #4b2634;
+  color: #fda4af;
+}
+.reference-ui input,
+.reference-ui select,
+.reference-ui textarea {
+  background: #374151;
+  border-color: #4b5563;
+  border-radius: 4px;
+  color: #e5e7eb;
+}
+.reference-ui input::placeholder,
+.reference-ui textarea::placeholder {
+  color: #9ca3af;
+}
+.reference-ui .search-input {
+  background: #374151;
+  border-color: #4b5563;
+  height: 32px;
+}
+.reference-ui .search-input input {
+  background: transparent;
+  border: 0;
+  font-size: 11px;
+}
+.reference-ui .classic-camera-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 16px;
+}
+.reference-ui .classic-camera-tools > span {
+  font-size: 11px;
+  color: #9ca3af;
+}
+.reference-ui .classic-camera-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.reference-ui .classic-camera-card {
+  padding: 13px;
+  background: #1f2937;
+  border-radius: 6px;
+  min-width: 0;
+  border: 1px solid #263445;
+}
+.reference-ui .classic-camera-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 0;
+  text-align: left;
+  font-size: 13px;
+  color: #e5e7eb;
+}
+.reference-ui .classic-camera-title > strong {
+  font-weight: 600;
+  flex: 1;
+}
+.reference-ui .classic-camera-title > svg:last-child {
+  color: #6b7280;
+}
+.reference-ui .classic-camera-card > p {
+  font-size: 10px;
+  color: #9ca3af;
+  margin: 6px 0 12px;
+}
+.reference-ui .classic-camera-feed {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.43;
+  background: #000;
+  display: block;
+  padding: 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.reference-ui .classic-camera-feed > video,
+.reference-ui .classic-camera-feed > img {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+  display: block;
+}
+.reference-ui .classic-camera-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #0009;
+  border-radius: 50%;
+  height: 50px;
+  width: 50px;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.reference-ui .classic-camera-feed:hover .classic-camera-play {
+  opacity: 1;
+}
+.reference-ui .classic-feed-tag {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  font-size: 7px;
+  letter-spacing: 0.8px;
+  color: #d1d5db;
+  background: #111827ba;
+  border-radius: 3px;
+  padding: 2px 4px;
+}
+.reference-ui .classic-camera-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: #9ca3af;
+  padding-top: 9px;
+}
+.reference-ui .classic-camera-status > button {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: #93c5fd;
+  padding: 0;
+}
+.reference-ui .camera-placeholder {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  color: #6b7280;
+  font-size: 12px;
+}
+.reference-ui .page-heading {
+  min-height: 0;
+  margin-bottom: 20px;
+}
+.reference-ui .page-heading h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.reference-ui .page-heading .eyebrow,
+.reference-ui .title-dot {
+  display: none;
+}
+.reference-ui .page-heading p {
+  font-size: 11px;
+  margin-top: 4px;
+}
+.reference-ui .back-link {
+  font-size: 11px;
+  margin-bottom: 12px;
+}
+.reference-ui .monitor-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+  margin-bottom: 18px;
+}
+.reference-ui .viewer-panel > .panel-title {
+  padding: 11px 12px;
+}
+.reference-ui .video-stage {
+  aspect-ratio: 1.43;
+  margin: 0 10px;
+  background: #000;
+  border-radius: 4px;
+}
+.reference-ui .video-controls {
+  padding: 9px 10px;
+  min-height: 46px;
+  border-top: 0;
+}
+.reference-ui .video-controls .btn {
+  font-size: 10px;
+  padding: 5px 8px;
+  min-height: 26px;
+}
+.reference-ui .video-controls .muted {
+  font-size: 9px;
+  max-width: 330px;
+}
+.reference-ui .video-controls .icon-btn {
+  height: 25px;
+  width: 25px;
+}
+.reference-ui .video-placeholder {
+  background: #111827;
+}
+.reference-ui .video-placeholder-icon {
+  background: #263549;
+  border-color: #3b536b;
+  color: #93c5fd;
+  box-shadow: none;
+  border-radius: 10px;
+  height: 60px;
+  width: 60px;
+}
+.reference-ui .video-placeholder h3 {
+  font-size: 17px;
+}
+.reference-ui .video-placeholder p {
+  font-size: 11px;
+  color: #9ca3af;
+  max-width: 280px;
+  margin-bottom: 18px;
+}
+.reference-ui .detection-settings {
+  font-size: 10px;
+  gap: 12px;
+  padding: 10px 12px;
+  border-color: #374151;
+  color: #cbd5e1;
+}
+.reference-ui .detection-settings > label {
+  color: #9ca3af;
+  font-size: 10px;
+}
+.reference-ui .ai-analyze-toolbar {
+  background: #252d40;
+  border-color: #374151;
+  font-size: 10px;
+  padding: 10px 12px;
+  gap: 10px;
+  color: #c4b5fd;
+  flex-wrap: wrap;
+}
+.reference-ui .ai-analyze-toolbar label {
+  font-size: 10px;
+  color: #c4b5fd;
+}
+.reference-ui .ai-analyze-toolbar select {
+  font-size: 9px;
+  padding: 5px;
+}
+.reference-ui .ai-analyze-toolbar > .btn {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+  font-size: 10px;
+}
+.reference-ui .analysis-summary {
+  background: #263246;
+  border-color: #374151;
+  padding: 13px;
+}
+.reference-ui .analysis-summary p {
+  font-size: 11px;
+  line-height: 1.7;
+}
+.reference-ui .live-events {
+  min-height: 330px;
+  max-height: 850px;
+  display: flex;
+  flex-direction: column;
+}
+.reference-ui .video-events-list {
+  padding: 0 13px 13px;
+  overflow: auto;
+  flex: 1;
+  min-height: 200px;
+}
+.reference-ui .video-event {
+  display: block;
+  position: relative;
+  border: 1px solid #145c48;
+  background: #12372f70;
+  color: #86bca8;
+  border-radius: 4px;
+  padding: 11px 12px;
+  margin: 0 0 8px;
+  text-align: left;
+  width: 100%;
+}
+.reference-ui .video-event.warning {
+  border-color: #725b22;
+  background: #3a342478;
+  color: #c1b26f;
+}
+.reference-ui .video-event.critical {
+  border-color: #80374b;
+  background: #4b24346b;
+  color: #d09aab;
+}
+.reference-ui .video-event > span {
+  font-size: 11px;
+  display: block;
+  margin-bottom: 5px;
+}
+.reference-ui .video-event > p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.reference-ui .video-event > small {
+  display: block;
+  margin-top: 7px;
+}
+.reference-ui .video-event > i {
+  position: absolute;
+  right: 10px;
+  top: 13px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+}
+.reference-ui .video-event.warning > i {
+  background: #f59e0b;
+}
+.reference-ui .video-event.critical > i {
+  background: #ef4444;
+}
+.reference-ui .video-event.current {
+  box-shadow: 0 0 0 1px currentColor inset;
+}
+.reference-ui .events-waiting {
+  padding: 26px 15px;
+  text-align: center;
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.8;
+}
+.reference-ui .demo-timeline {
+  padding: 12px;
+  border-top: 1px solid #374151;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  color: #9ca3af;
+}
+.reference-ui .demo-timeline > button {
+  padding: 4px 6px;
+  border: 1px solid #4b5563;
+  border-radius: 3px;
+  font-size: 10px;
+  background: #374151;
+}
+.reference-ui .monitor-workflow > .panel-title {
+  padding: 12px;
+}
+.reference-ui .graph-toolbar {
+  background: #1f2937;
+  border: 0;
+  padding: 7px 10px;
+}
+.reference-ui .graph-mode,
+.reference-ui .toolbar-divider,
+.reference-ui .graph-hint {
+  display: none;
+}
+.reference-ui .graph-toolbar-actions {
+  margin-left: auto;
+  gap: 5px;
+}
+.reference-ui .graph-toolbar .btn {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  border-radius: 4px;
+  font-size: 9px;
+  padding: 5px 8px;
+  min-height: 27px;
+}
+.reference-ui .graph-toolbar .graph-save {
+  background: #22c55e;
+  border-color: #22c55e;
+}
+.reference-ui .graph-toolbar .graph-voice {
+  background: #a855f7;
+  border-color: #a855f7;
+}
+.reference-ui .graph-toolbar .icon-btn {
+  width: auto;
+  height: 27px;
+  display: inline-flex;
+  gap: 4px;
+  padding: 5px 8px;
+  background: #4b5563;
+  border: 1px solid #4b5563;
+  color: white;
+  border-radius: 4px;
+  font-size: 9px;
+}
+.reference-ui .graph-toolbar .icon-btn > svg {
+  width: 12px;
+  height: 12px;
+}
+.reference-ui .graph-toolbar .graph-download {
+  background: #f97316;
+  border-color: #f97316;
+}
+.reference-ui .graph-toolbar .graph-import {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+.reference-ui .graph-toolbar .graph-expand {
+  background: #a855f7;
+  border-color: #a855f7;
+}
+.reference-ui .graph-scroll {
+  margin: 0 12px 12px;
+  border: 1px dashed #4b5563;
+  border-radius: 5px;
+  background: #111827;
+  background-image: radial-gradient(#39425355 0.7px, transparent 0.7px);
+  background-size: 18px 18px;
+  min-height: 330px;
+}
+.reference-ui .flow-node {
+  border: 1px solid #596477;
+  background: #1f2937;
+  border-radius: 7px;
+  box-shadow: 0 2px 6px #0004;
+}
+.reference-ui .flow-node-header {
+  color: #9ca3af;
+}
+.reference-ui .node-icon {
+  border-radius: 50%;
+  background: #3b82f6;
+  color: white;
+  border: 0;
+  width: 29px;
+  height: 29px;
+}
+.reference-ui .rule .node-icon {
+  background: #fbbf24;
+  color: #fff;
+}
+.reference-ui .action .node-icon {
+  background: #22c55e;
+  color: #fff;
+}
+.reference-ui .flow-node-body h4 {
+  font-size: 12px;
+  color: #e5e7eb;
+}
+.reference-ui .flow-node-body p {
+  font-size: 9px;
+  line-height: 1.7;
+  color: #9ca3af;
+}
+.reference-ui .node-chip {
+  background: #293d69;
+  color: #bfdbfe;
+  border-color: #415691;
+}
+.reference-ui .rule .node-chip {
+  background: #493d1c;
+  color: #fde68a;
+  border-color: #786030;
+}
+.reference-ui .action .node-chip {
+  background: #263a6d;
+  color: #bfdbfe;
+  border-color: #4a5b96;
+}
+.reference-ui .node-port {
+  background: #1f2937;
+  border-color: #60a5fa;
+}
+.reference-ui .edge-line {
+  stroke: #3b82f6;
+  stroke-width: 2;
+}
+.reference-ui .graph-edges marker path {
+  fill: #3b82f6;
+}
+.reference-ui .flow-node.executing {
+  border-color: #4ade80;
+  box-shadow:
+    0 0 0 2px #4ade8066,
+    0 0 20px #4ade801a;
+}
+.reference-ui .flow-node.rule.executing {
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 2px #fbbf2455;
+}
+.reference-ui .graph-edges g.executing .edge-line {
+  stroke: #86efac;
+  stroke-width: 3;
+  stroke-dasharray: 8 5;
+  animation: edgeflow 1s linear infinite;
+}
+@keyframes edgeflow {
+  to {
+    stroke-dashoffset: -26;
+  }
+}
+.reference-ui .graph-bottom-bar {
+  background: #1f2937;
+  border-color: #374151;
+  color: #9ca3af;
+  margin: 0 12px 10px;
+}
+.reference-ui .graph-watermark {
+  color: #4b5563;
+}
+.reference-ui .compact-save {
+  background: #1f2937;
+  border-color: #374151;
+}
+.reference-ui .workflow-executor {
+  margin-top: 18px;
+}
+.reference-ui .workflow-executor label {
+  font-size: 10px;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.reference-ui .executor-observation {
+  padding: 8px 16px 18px;
+}
+.reference-ui .executor-observation p {
+  margin-top: 12px;
+  background: #2563eb;
+  padding: 10px 12px;
+  border-radius: 5px;
+  font-size: 11px;
+  width: fit-content;
+  margin-left: auto;
+  max-width: 80%;
+}
+.reference-ui .executor-observation small {
+  display: block;
+  text-align: right;
+  margin-top: 8px;
+  color: #9ca3af;
+  font-size: 9px;
+}
+.reference-ui .modal-backdrop {
+  background: #000d;
+  backdrop-filter: none;
+}
+.reference-ui .modal {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  box-shadow: 0 10px 50px #0008;
+}
+.reference-ui .modal-head h2 {
+  font-size: 17px;
+}
+.reference-ui .modal-head p {
+  font-size: 11px;
+}
+.reference-ui .modal-actions {
+  border-color: #374151;
+}
+.reference-ui .modal-actions .btn.primary {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+.reference-ui .info-box {
+  border-color: #3e526b;
+  background: #263346;
+  color: #93c5fd;
+}
+.reference-ui .info-box p {
+  color: #9ca3af;
+}
+.reference-ui .info-box strong {
+  color: #cbd5e1;
+}
+.reference-ui .toast {
+  background: #166534;
+  border-color: #22c55e;
+  color: white;
+  left: auto;
+  right: 18px;
+  top: 16px;
+  bottom: auto;
+  transform: none;
+  font-size: 12px;
+  animation: none;
+  box-shadow: 0 4px 20px #0003;
+}
+.reference-ui .toast.error {
+  background: #7f1d1d;
+  border-color: #ef4444;
+}
+.reference-ui .chat-layout {
+  grid-template-columns: 340px 1fr;
+  background: #f9fafb;
+  border-color: #e5e7eb;
+  min-height: calc(100vh - 130px);
+  height: auto;
+  color: #111827;
+}
+.reference-ui .chat-cameras {
+  background: white;
+  border-color: #e5e7eb;
+  padding: 18px;
+}
+.reference-ui .chat-cameras-heading h3 {
+  font-size: 13px;
+  color: #111827;
+}
+.reference-ui .chat-cameras-heading > span {
+  font-size: 10px;
+  color: #6b7280;
+}
+.reference-ui .chat-cameras > p {
+  color: #6b7280;
+  font-size: 10px;
+}
+.reference-ui .select-all {
+  color: #2563eb;
+  font-size: 10px;
+}
+.reference-ui .chat-camera-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  overflow: visible;
+}
+.reference-ui .chat-camera-list > button {
+  padding: 0;
+  position: relative;
+  display: block;
+  border: 2px solid transparent;
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 0;
+  aspect-ratio: 1;
+}
+.reference-ui .chat-camera-list > button.selected {
+  border-color: #3b82f6;
+  background: #dbeafe;
+}
+.reference-ui .chat-camera-list img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: none;
+  border-radius: 0;
+}
+.reference-ui .chat-camera-list > button > div {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #0009;
+  padding: 4px;
+  text-align: left;
+}
+.reference-ui .chat-camera-list strong {
+  font-size: 8px;
+  color: white;
+}
+.reference-ui .chat-camera-list small {
+  color: #d1d5db;
+  font-size: 6px;
+  margin-top: 2px;
+}
+.reference-ui .check-square {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  background: #fffc;
+  border-color: #e5e7eb;
+  color: #2563eb;
+}
+.reference-ui .selected .check-square {
+  background: #3b82f6;
+  color: white;
+}
+.reference-ui .chat-conversation {
+  height: calc(100vh - 140px);
+  min-height: 600px;
+}
+.reference-ui .chat-welcome h2 {
+  font-size: 19px;
+  color: #374151;
+  line-height: 1.5;
+}
+.reference-ui .chat-welcome > p {
+  color: #6b7280;
+  font-size: 12px;
+}
+.reference-ui .chat-orb,
+.reference-ui .chat-welcome .eyebrow {
+  display: none;
+}
+.reference-ui .chat-welcome {
+  max-width: 580px;
+}
+.reference-ui .suggestion-grid > button {
+  background: white;
+  border-color: #d1d5db;
+  color: #4b5563;
+  font-size: 11px;
+}
+.reference-ui .suggestion-grid > button > svg {
+  color: #3b82f6;
+}
+.reference-ui .chat-composer {
+  border-color: #e5e7eb;
+  background: white;
+}
+.reference-ui .chat-composer form {
+  background: white;
+  border-color: #d1d5db;
+  border-radius: 4px;
+}
+.reference-ui .chat-composer input {
+  color: #111827;
+  background: none;
+}
+.reference-ui .chat-composer > p {
+  color: #6b7280;
+  font-size: 9px;
+}
+.reference-ui .send-btn {
+  background: #3b82f6;
+  color: white;
+}
+.reference-ui .chat-source-note {
+  color: #6b7280;
+  font-size: 10px;
+}
+.reference-ui .message-content {
+  color: #374151;
+  font-size: 12px;
+}
+.reference-ui .message-author {
+  color: #1f2937;
+}
+.reference-ui .message-author time {
+  color: #9ca3af;
+}
+.reference-ui .message-avatar {
+  background: #dbeafe;
+  color: #2563eb;
+  border-color: #93c5fd;
+}
+.reference-ui .user .message-avatar {
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #d1d5db;
+}
+.reference-ui .message-sources .badge {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.reference-ui .provider-grid {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.reference-ui .provider-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px;
+}
+.reference-ui .provider-card h3 {
+  margin: 0;
+  font-size: 13px;
+  min-width: 100px;
+}
+.reference-ui .provider-card p {
+  margin: 0;
+  font-size: 11px;
+  min-height: 0;
+  flex: 1;
+}
+.reference-ui .provider-card .btn {
+  width: auto;
+  margin-left: auto;
+  font-size: 10px;
+}
+.reference-ui .provider-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 5px;
+  font-size: 20px;
+}
+.reference-ui .section-label {
+  font-size: 11px;
+  margin: 23px 0 13px;
+}
+.reference-ui .workflow-cards {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.reference-ui .workflow-card-icon {
+  border-radius: 5px;
+  background: #26364b;
+  border-color: #3b4d65;
+  color: #93c5fd;
+}
+.reference-ui .workflow-card-footer,
+.reference-ui .connection-row {
+  border-color: #374151;
+}
+.reference-ui .workflow-prompt {
+  background: #1f2937;
+  border-color: #374151;
+  border-radius: 5px;
+}
+.reference-ui .workflow-prompt input {
+  background: none;
+}
+.reference-ui .workflow-prompt > .btn {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+.reference-ui .toggle.on {
+  background: #22c55e;
+  border-color: #22c55e;
+}
+.reference-ui .toggle.on > span {
+  background: white;
+}
+.reference-ui .event-search {
+  margin-bottom: 22px;
+}
+.reference-ui .event-search > form {
+  padding: 5px 16px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.reference-ui .event-search > form > .search-input {
+  flex: 1;
+  min-width: 220px;
+  max-width: none;
+}
+.reference-ui .event-search > form > select {
+  font-size: 10px;
+  padding: 8px;
+  max-width: 170px;
+}
+.reference-ui .event-search input[type="datetime-local"] {
+  font-size: 10px;
+  padding: 7px;
+  max-width: 170px;
+}
+.reference-ui .search-guidance {
+  font-size: 10px;
+  line-height: 1.8;
+  padding: 0 16px 16px;
+  color: #9ca3af;
+}
+.reference-ui .search-result-heading {
+  padding: 12px 16px;
+  border-top: 1px solid #374151;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #9ca3af;
+}
+.reference-ui .search-result-list > button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  text-align: left;
+  padding: 15px 16px;
+  border-top: 1px solid #374151;
+}
+.reference-ui .search-result-list > button:hover {
+  background: #29374b;
+}
+.reference-ui .search-result-image {
+  height: 68px;
+  width: 105px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: #111827;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.reference-ui .search-result-image > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.reference-ui .search-result-image > svg:last-child {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  color: white;
+}
+.reference-ui .search-result-list > button > div:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.reference-ui .search-result-list strong {
+  font-size: 12px;
+}
+.reference-ui .search-result-list p {
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+.reference-ui .search-result-list small {
+  display: block;
+  font-size: 9px;
+  color: #93a4ba;
+  margin: 6px 0;
+}
+.reference-ui .search-result-list .badge {
+  margin-right: 5px;
+}
+.reference-ui.sidebar-collapsed .sidebar {
+  width: 52px;
+}
+.reference-ui.sidebar-collapsed .main-shell {
+  margin-left: 52px;
+}
+.reference-ui.sidebar-collapsed .brand {
+  font-size: 0;
+  margin: 5px 10px 24px;
+}
+.reference-ui.sidebar-collapsed .brand-mark {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 5px;
+}
+.reference-ui.sidebar-collapsed .nav-item {
+  padding: 13px 18px;
+  gap: 0;
+}
+.reference-ui.sidebar-collapsed .nav-item > span {
+  display: none;
+}
+.reference-ui.sidebar-collapsed .nav-item > svg {
+  width: 16px;
+  height: 16px;
+}
+.reference-ui .boot .brand-mark {
+  display: grid;
+}
+.reference-ui .boot h2 {
+  font-size: 19px;
+}
+.reference-ui .boot > .btn.primary {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+@media (min-width: 1600px) {
+  .reference-ui .sidebar {
+    width: 190px;
+  }
+  .reference-ui .main-shell {
+    margin-left: 190px;
+  }
+  .reference-ui .classic-camera-title {
+    font-size: 15px;
+  }
+  .reference-ui .classic-camera-card > p {
+    font-size: 12px;
+  }
+  .reference-ui .classic-camera-grid {
+    gap: 22px;
+  }
+  .reference-ui .classic-camera-status {
+    font-size: 11px;
+  }
+  .reference-ui .classic-feed-tag {
+    font-size: 9px;
+  }
+  .reference-ui .video-event > p {
+    font-size: 14px;
+  }
+  .reference-ui .nav-item {
+    font-size: 14px;
+    padding: 13px 18px;
+  }
+  .reference-ui .classic-heading h1 {
+    font-size: 24px;
+  }
+}
+@media (max-width: 1100px) {
+  .reference-ui .sidebar {
+    width: 150px;
+  }
+  .reference-ui .main-shell {
+    margin-left: 150px;
+  }
+  .reference-ui .content {
+    padding: 15px;
+  }
+  .reference-ui .nav-item {
+    font-size: 11px;
+    padding: 11px 12px;
+    gap: 8px;
+  }
+  .reference-ui .brand {
+    margin-left: 15px;
+    font-size: 20px;
+  }
+  .reference-ui .classic-camera-grid {
+    gap: 12px;
+  }
+  .reference-ui .classic-camera-card {
+    padding: 10px;
+  }
+  .reference-ui .classic-camera-title {
+    font-size: 11px;
+  }
+  .reference-ui .classic-camera-card > p {
+    font-size: 9px;
+  }
+  .reference-ui .classic-camera-status {
+    font-size: 8px;
+  }
+  .reference-ui .classic-camera-status > button {
+    font-size: 8px;
+  }
+  .reference-ui .classic-heading h1 {
+    font-size: 20px;
+  }
+  .reference-ui .monitor-grid {
+    gap: 12px;
+  }
+  .reference-ui .video-event > p {
+    font-size: 11px;
+  }
+  .reference-ui .video-event {
+    padding: 9px 10px;
+  }
+  .reference-ui .video-event > span {
+    font-size: 10px;
+  }
+  .reference-ui .video-controls .muted {
+    font-size: 8px;
+  }
+  .reference-ui .panel-title h2 {
+    font-size: 11px;
+  }
+  .reference-ui .panel-title small {
+    font-size: 8px;
+  }
+  .reference-ui .graph-toolbar .btn,
+  .reference-ui .graph-toolbar .icon-btn {
+    font-size: 8px;
+    padding: 4px 6px;
+  }
+  .reference-ui .chat-layout {
+    grid-template-columns: 280px 1fr;
+  }
+  .reference-ui .chat-cameras {
+    padding: 13px;
+  }
+}
+@media (max-width: 800px) {
+  .reference-ui .classic-camera-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .reference-ui .monitor-grid {
+    grid-template-columns: 1fr;
+  }
+  .reference-ui .live-events {
+    min-height: 240px;
+    max-height: 430px;
+  }
+  .reference-ui .video-events-list {
+    min-height: 130px;
+  }
+  .reference-ui .video-stage {
+    aspect-ratio: 1.5;
+  }
+  .reference-ui .graph-toolbar {
+    flex-wrap: wrap;
+  }
+  .reference-ui .graph-toolbar-left {
+    width: 0;
+  }
+  .reference-ui .graph-toolbar-actions {
+    flex-wrap: wrap;
+  }
+  .reference-ui .workflow-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .reference-ui .chat-layout {
+    grid-template-columns: 220px 1fr;
+  }
+  .reference-ui .chat-camera-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .reference-ui .chat-conversation {
+    min-height: 600px;
+  }
+}
+@media (max-width: 760px) {
+  .reference-ui .sidebar {
+    width: 174px;
+    transform: translateX(-100%);
+  }
+  .reference-ui .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  .reference-ui .main-shell,
+  .reference-ui.sidebar-collapsed .main-shell {
+    margin-left: 0;
+  }
+  .reference-ui .topbar {
+    display: flex;
+    height: 48px;
+    padding: 0 15px;
+    background: #1f2937;
+  }
+  .reference-ui .topbar .global-search {
+    display: flex;
+  }
+  .reference-ui .topbar .breadcrumb {
+    font-size: 10px;
+  }
+  .reference-ui .content {
+    padding: 14px;
+  }
+  .reference-ui .classic-heading {
+    gap: 12px;
+  }
+  .reference-ui .classic-heading h1 {
+    font-size: 19px;
+  }
+  .reference-ui .classic-heading > div:last-child {
+    gap: 6px;
+  }
+  .reference-ui .classic-heading .btn {
+    font-size: 9px;
+    padding: 7px 8px;
+  }
+  .reference-ui .classic-heading .btn > svg {
+    width: 12px;
+  }
+  .reference-ui .classic-camera-title {
+    font-size: 12px;
+  }
+  .reference-ui .classic-camera-card > p {
+    font-size: 10px;
+  }
+  .reference-ui .classic-camera-status {
+    font-size: 9px;
+  }
+  .reference-ui .classic-camera-tools > span {
+    font-size: 9px;
+  }
+  .reference-ui .classic-monitor .classic-heading > div:last-child {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .reference-ui .classic-heading select {
+    font-size: 9px;
+    max-width: 180px;
+  }
+  .reference-ui .page-heading h1 {
+    font-size: 21px;
+  }
+  .reference-ui .chat-layout {
+    grid-template-columns: 1fr;
+    min-height: 700px;
+  }
+  .reference-ui .chat-cameras {
+    border-right: 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .reference-ui .chat-camera-list {
+    grid-template-columns: repeat(6, minmax(70px, 1fr));
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 5px;
+  }
+  .reference-ui .chat-camera-list > button {
+    width: 100%;
+    min-width: 70px;
+  }
+  .reference-ui .chat-conversation {
+    height: 600px;
+    min-height: 500px;
+  }
+  .reference-ui .chat-cameras-heading h3 {
+    font-size: 13px;
+  }
+  .reference-ui .chat-cameras-heading > span {
+    font-size: 10px;
+  }
+  .reference-ui .chat-camera-list strong {
+    font-size: 8px;
+  }
+  .reference-ui .chat-camera-list small {
+    font-size: 6px;
+  }
+  .reference-ui .chat-composer input {
+    font-size: 11px;
+  }
+  .reference-ui .message-content {
+    font-size: 12px;
+  }
+  .reference-ui .chat-welcome h2 {
+    font-size: 20px;
+  }
+  .reference-ui .provider-card {
+    gap: 12px;
+    padding: 14px;
+  }
+  .reference-ui .provider-card p {
+    font-size: 10px;
+  }
+  .reference-ui .provider-card h3 {
+    font-size: 12px;
+    min-width: 70px;
+  }
+  .reference-ui .provider-card .btn {
+    font-size: 9px;
+    padding: 6px 9px;
+  }
+  .reference-ui .toast {
+    max-width: calc(100vw - 30px);
+    font-size: 11px;
+  }
+  .reference-ui.sidebar-collapsed .sidebar {
+    width: 174px;
+  }
+  .reference-ui.sidebar-collapsed .nav-item > span {
+    display: inline;
+  }
+  .reference-ui.sidebar-collapsed .brand {
+    font-size: 20px;
+    margin: 5px 15px 24px;
+  }
+  .reference-ui.sidebar-collapsed .brand-mark {
+    display: none;
+  }
+  .reference-ui.sidebar-collapsed .nav-item {
+    padding: 11px 15px;
+    gap: 10px;
+  }
+}
+@media (max-width: 480px) {
+  .reference-ui .classic-camera-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .reference-ui .classic-camera-card {
+    padding: 12px;
+  }
+  .reference-ui .classic-camera-title {
+    font-size: 14px;
+  }
+  .reference-ui .classic-camera-card > p {
+    font-size: 11px;
+  }
+  .reference-ui .classic-camera-status {
+    font-size: 10px;
+  }
+  .reference-ui .classic-camera-status > button {
+    font-size: 10px;
+  }
+  .reference-ui .classic-feed-tag {
+    font-size: 8px;
+  }
+  .reference-ui .classic-camera-tools > span {
+    font-size: 8px;
+    max-width: 110px;
+    text-align: right;
+  }
+  .reference-ui .classic-heading {
+    align-items: flex-start;
+  }
+  .reference-ui .classic-heading h1 {
+    font-size: 18px;
+  }
+  .reference-ui .classic-heading p {
+    font-size: 10px;
+  }
+  .reference-ui .classic-heading > div:last-child > .btn.secondary {
+    font-size: 0;
+    width: 29px;
+    padding: 6px;
+  }
+  .reference-ui .classic-heading > div:last-child > .btn.secondary > svg {
+    width: 14px;
+  }
+  .reference-ui .classic-heading > div:last-child {
+    max-width: 175px;
+  }
+  .reference-ui .video-event > p {
+    font-size: 12px;
+  }
+  .reference-ui .video-event > span {
+    font-size: 10px;
+  }
+  .reference-ui .video-controls .muted {
+    font-size: 7px;
+    max-width: 165px;
+  }
+  .reference-ui .video-controls > div {
+    gap: 5px;
+  }
+  .reference-ui .video-controls .icon-btn {
+    width: 22px;
+  }
+  .reference-ui .detection-settings {
+    font-size: 9px;
+    gap: 8px;
+  }
+  .reference-ui .detection-settings > label {
+    font-size: 9px;
+  }
+  .reference-ui .ai-analyze-toolbar {
+    gap: 8px;
+  }
+  .reference-ui .ai-analyze-toolbar label {
+    font-size: 9px;
+  }
+  .reference-ui .ai-analyze-toolbar select {
+    font-size: 8px;
+    max-width: 90px;
+  }
+  .reference-ui .ai-analyze-toolbar > .btn {
+    font-size: 9px;
+  }
+  .reference-ui .video-stage {
+    margin: 0 8px;
+    aspect-ratio: 1.4;
+  }
+  .reference-ui .surface > .panel-title {
+    padding: 12px;
+  }
+  .reference-ui .graph-toolbar {
+    padding: 7px;
+  }
+  .reference-ui .graph-toolbar .btn,
+  .reference-ui .graph-toolbar .icon-btn {
+    font-size: 7px;
+    padding: 5px;
+    gap: 3px;
+    min-height: 24px;
+    height: 24px;
+  }
+  .reference-ui .graph-toolbar .icon-btn > svg,
+  .reference-ui .graph-toolbar .btn > svg {
+    width: 10px;
+  }
+  .reference-ui .graph-toolbar-actions {
+    gap: 4px;
+    justify-content: flex-end;
+  }
+  .reference-ui .graph-toolbar .graph-import {
+    order: 5;
+  }
+  .reference-ui .graph-scroll {
+    margin: 0 8px 8px;
+  }
+  .reference-ui .monitor-workflow .panel-title > div select {
+    max-width: 90px;
+    font-size: 8px;
+    padding: 5px;
+  }
+  .reference-ui .monitor-workflow .panel-title > div .btn {
+    font-size: 8px;
+    min-height: 26px;
+    padding: 5px 7px;
+  }
+  .reference-ui .workflow-cards {
+    grid-template-columns: 1fr;
+  }
+  .reference-ui .provider-card {
+    flex-wrap: wrap;
+  }
+  .reference-ui .provider-card p {
+    flex-basis: calc(100% - 160px);
+    font-size: 9px;
+  }
+  .reference-ui .provider-card h3 {
+    min-width: 60px;
+    font-size: 11px;
+  }
+  .reference-ui .provider-card .btn {
+    margin-left: auto;
+    font-size: 9px;
+  }
+  .reference-ui .search-result-image {
+    width: 65px;
+    height: 55px;
+  }
+  .reference-ui .search-result-list > button {
+    gap: 10px;
+    padding: 13px;
+  }
+  .reference-ui .search-result-list strong {
+    font-size: 11px;
+  }
+  .reference-ui .search-result-list p {
+    font-size: 10px;
+  }
+  .reference-ui .search-result-list > button > .badge {
+    display: none;
+  }
+  .reference-ui .event-search > form {
+    padding: 5px 12px 13px;
+    gap: 8px;
+  }
+  .reference-ui .event-search > form > .search-input {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+  .reference-ui .event-search > form > select {
+    flex: 1;
+    max-width: 50%;
+    font-size: 9px;
+  }
+  .reference-ui .event-search input[type="datetime-local"] {
+    width: calc(50% - 4px);
+    max-width: none;
+    font-size: 8px;
+  }
+  .reference-ui .event-search > form > .btn {
+    width: 100%;
+  }
+  .reference-ui .search-guidance {
+    font-size: 9px;
+    padding: 0 12px 14px;
+  }
+  .reference-ui .chat-camera-list {
+    grid-template-columns: repeat(6, 80px);
+  }
+  .reference-ui .chat-camera-list > button {
+    min-width: 80px;
+  }
+  .reference-ui .suggestion-grid > button {
+    font-size: 9px;
+  }
+  .reference-ui .chat-composer > p {
+    font-size: 8px;
+  }
+}
+
+.monitor-session-workers {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 640px;
+  height: 480px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.monitor-session-workers video {
+  position: absolute;
+  width: 640px;
+  height: 480px;
+}
+.monitor-session-bar {
+  position: fixed;
+  bottom: 18px;
+  right: 24px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #162c25;
+  border: 1px solid #36755d;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px #0005;
+  color: #a7f3d0;
+}
+.monitor-session-bar button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.session-camera-list {
+  display: grid;
+  gap: 8px;
+}
+.session-camera-list label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.session-camera-list label span {
+  flex: 1;
+}
+.session-camera-list small,
+.saved-recordings small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.session-options {
+  display: grid;
+  gap: 14px;
+  margin: 20px 0;
+}
+.session-options label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.saved-recordings {
+  border-top: 1px solid var(--border);
+  margin-top: 20px;
+  padding-top: 16px;
+}
+.saved-recordings > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.saved-recordings > div > span {
+  flex: 1;
+}
+.archive-video {
+  display: block;
+  width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  background: #000;
+  border-radius: 5px;
+}
+@media (max-width: 600px) {
+  .monitor-session-bar {
+    bottom: 12px;
+    right: 10px;
+    left: 10px;
+    justify-content: space-between;
+  }
+  .saved-recordings > div {
+    flex-wrap: wrap;
+  }
+  .saved-recordings > div > span {
+    flex-basis: 100%;
+  }
+}

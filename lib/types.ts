@@ -22,6 +22,13 @@ export type Event = {
   acknowledged: boolean;
   demo?: boolean;
   snapshot?: string;
+  sourceTime?: number;
+  sessionId?: string;
+  personId?: string;
+  personName?: string;
+  trackId?: string;
+  matchedRuleIds?: string[];
+  origin?: "local" | "ai" | "demo";
 };
 export type FlowNode = {
   id: string;
@@ -32,6 +39,7 @@ export type FlowNode = {
   y: number;
   cameraId?: string;
   detectionClass?: string;
+  ruleMode?: "object" | "semantic";
   action?: string;
   destination?: string;
   integrationId?: string;
@@ -72,6 +80,7 @@ export type Execution = {
   eventId: string;
   eventTitle: string;
   timestamp: number;
+  visitedNodes?: string[];
   status: "success" | "failed" | "partial" | "pending";
   results: {
     nodeId: string;
@@ -115,7 +124,20 @@ export type Workspace = {
   executions: Execution[];
   messages: ChatMessage[];
   reports: Report[];
+  recordings: Recording[];
   settings: Settings;
   user: { name: string; email: string };
   capabilities: { ai: boolean; email: boolean; sms: boolean; call: boolean };
+};
+
+export type Recording = {
+  id: string;
+  cameraId: string;
+  name: string;
+  url: string;
+  startedAt: number;
+  endedAt: number;
+  sourceOffset: number;
+  duration: number;
+  sessionId: string;
 };

@@ -61,11 +61,30 @@ export async function DELETE(request: Request) {
         "reports",
         "messages",
         "events",
+        "recordings",
       ].includes(kind) ||
       typeof id !== "string"
     )
       throw new ApiError("Invalid deletion.");
+    if (kind === "recordings" && env.BUCKET) {
+      const recording = await readOne(u.userId, kind, id);
+      if (recording) await env.BUCKET.delete(`${u.userId}/${id}`);
+    }
     if (kind === "cameras") {
+      const recordings = await env
+        .DB!.prepare(
+          "SELECT id FROM records WHERE owner=? AND kind='recordings' AND json_extract(data,'$.cameraId')=?",
+        )
+        .bind(u.userId, id)
+        .all<{ id: string }>();
+      for (const clip of recordings.results)
+        if (env.BUCKET) await env.BUCKET.delete(`${u.userId}/${clip.id}`);
+      await env
+        .DB!.prepare(
+          "DELETE FROM records WHERE owner=? AND kind='recordings' AND json_extract(data,'$.cameraId')=?",
+        )
+        .bind(u.userId, id)
+        .run();
       const camera = await readOne(u.userId, kind, id);
       if (camera?.source === "upload" && env.BUCKET) {
         const key = camera.url.split("/").pop();

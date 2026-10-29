@@ -16,25 +16,29 @@ npm run dev
 
 Open http://localhost:5173 and choose **Sign in to Odin**. Local development uses the starter's loopback-only test identity. Production uses hosted ChatGPT sign-in and a private site access policy.
 
-The first sign-in creates six clearly labeled sample camera previews, sample events, and two paused workflow templates. These previews are still images, and sample events never trigger external actions. Add a webcam, a video file, or a public HTTPS video URL to monitor real activity.
+The first sign-in creates six playable demonstration cameras, sample events, and paused workflow templates. Demonstration clips have explicitly scripted playback annotations; they do not call AI or send external actions. Existing built-in still previews upgrade automatically. The public introduction is at `/welcome`. Add a webcam, a video file, or a public HTTPS video URL to monitor real activity.
 
 ## What works
 
-- Camera creation, editing, deletion, category filters, search, and grid/list layouts.
+- Three-column camera dashboard with playable previews, camera creation, editing, deletion, and search.
 - Private video uploads to R2, playback, authenticated byte-range streaming, and media deletion.
 - Device webcam monitoring, snapshots, and downloadable webcam recordings.
+- Persistent browser monitoring of up to four connected feeds across app pages, with optional saved webcam segments in R2 and historical playback.
+- Camera-local geometric object tracks and enrolled-face sightings across cameras.
+- Database history search by text, camera, enrolled person, and date range, with source timestamps and JSON export.
 - On-device COCO-SSD object detection, Human face embeddings and matching, and pixel-difference motion detection.
 - Face enrollment from portraits, private embedding storage, and enrollment removal.
 - Timestamped events, confidence values, severity, acknowledgment, JSON export, and retention.
 - A central Triggers view for inspecting and updating detection rules.
 - Draggable workflow nodes, connection editing, graph validation, pause/activate controls, duplication, rename, deletion, and JSON import/export.
 - Natural-language workflow drafts, browser speech-to-text input, and tool suggestions using `@` in action descriptions.
-- Exact detection-class rules, per-action cooldown claims, and persisted execution/delivery logs.
+- Exact object-class rules and AI scene-description rules, per-action cooldown claims, and persisted execution/delivery logs.
+- Timestamped video events beside playback, matching workflow node/edge highlights, and a workflow executor panel.
 - Browser notifications and speech synthesis while a monitoring tab is active.
 - Server integrations for Resend email, Twilio SMS, Vapi calls, Slack/Discord/general webhooks, and Streamable HTTP MCP tools.
 - MCP tool discovery, input schema inspection, and JSON tool arguments with `{{message}}` substitution.
 - Camera chat grounded in selected cameras and their event history. Without Gemini, it explicitly returns an event summary.
-- Gemini frame analysis, periodic visual analysis, conversational answers, and workflow generation when a key is supplied.
+- Gemini analysis of up to six timestamped frames, optional periodic scene analysis, conversational answers, and workflow generation when a key is supplied.
 - Analytics calculated from actual stored events and executions, with date-range filtering and data export.
 - Date/camera-filtered PDF reports generated on the server. Reports retain their event snapshot.
 - Account-scoped D1 records and media, signed-in APIs, private hosting, and session-only Gemini keys.
@@ -72,9 +76,17 @@ Webhook URLs are configured in **Integrations** and stored in the private worksp
 5. Save and activate the workflow. Browser/voice permissions and preferences are under Settings.
 6. Detections create events, invoke matching active workflows, and populate execution history.
 
-Each detection class is recorded at most once per 30 seconds per viewer, and each action has a server-enforced cooldown of at least 30 seconds. Rules match the selected class exactly. Descriptive text is explanatory; time schedules, arbitrary natural-language conditions, and medical diagnoses are not inferred or silently enforced. Gemini analysis can create additional observation events, but results should be verified.
+Local events are deduplicated for 30 seconds by class and person/track within each capture session. Each action has a server-enforced cooldown of at least 30 seconds. Choose **On-device object class** for exact object matching, or **AI scene description** for a visible condition evaluated from sampled frames. Scene rules require configured AI and enabled analysis. A local person detection alone cannot satisfy a semantic rule; AI must return the allowed workflow-scoped rule ID. Descriptions cannot enforce time schedules or establish intent, and model observations require verification.
 
-Monitoring and inference run while the viewer is open. Closing the tab stops camera capture and analysis. This is not a background NVR or a server-side RTSP ingest service. RTSP cameras require a browser-compatible gateway. Webcam capture needs localhost or HTTPS. Browser video URL sources must permit CORS for pixel access. Video uploads support MP4, WebM, and Ogg up to 50 MB.
+For multiple feeds, choose **Monitor cameras** from the dashboard. Select up to four feeds and optionally enable face recognition, scene analysis, or saved webcam clips. Capture continues when navigating within Odin. **Stop all monitoring** releases the cameras; it also saves the final partial clip. View, download, or delete saved clips in **History & Search**. Removing a camera removes its observations and saved clips. Clips follow the configured retention window.
+
+Scene analysis defaults to 60-second intervals and sends at most six recent sampled frames, not every video frame. One cloud analysis runs per browser tab, requests are spaced by at least 20 seconds, and quota errors impose a 60-second cooldown. Busy feeds may skip a cycle. This reduces free-tier pressure but cannot bypass provider quotas or guarantee detection of short events. Object detection continues locally without cloud credits.
+
+Known face matches use the same enrolled person ID across cameras, enabling a searchable sightings trail. Matches are approximate and should be verified. Unknown object track IDs are geometric associations within one camera and capture session; they do not identify a person across different cameras or re-establish identity after a long absence. General appearance-based cross-camera re-identification is not implemented.
+
+Single-camera inference runs while its viewer is open. Multi-camera sessions remain active across app pages while the tab stays open; browser throttling and device limits can reduce throughput. Closing or reloading the tab stops capture and analysis. This is not a background NVR or a server-side RTSP ingest service. RTSP cameras require a browser-compatible gateway. Webcam capture needs localhost or HTTPS. Browser video URL sources must permit CORS for pixel access. Video uploads support MP4, WebM, and Ogg up to 50 MB.
+
+History search queries retained database events directly and returns the newest 200 matches. It is a keyword/filter search, not an embedding search over every raw frame. Ordinary workspace views load up to 2,000 recent records per kind. The chat uses the newest 80 selected-camera observations and explicitly falls back to a summary without a key. Saved webcam segments are approximately 30 seconds; upload time can create gaps between segments. This is not a continuous archival recorder.
 
 ## Architecture
 
@@ -84,7 +96,7 @@ Monitoring and inference run while the viewer is open. Closing the tab stops cam
 - **Files:** R2, with object keys partitioned by owner and authenticated media routes.
 - **Perception:** Pinned, lazy-loaded browser models; no frame upload for local inference.
 - **Reasoning:** Gemini REST requests from the server. Frame sharing happens only on explicit frame analysis or enabled periodic analysis.
-- **Automation:** Server graph traversal, exact-class rule evaluation, atomic cooldown claims, provider calls, and browser delivery acknowledgments.
+- **Automation:** Server graph traversal, exact-class and scoped semantic rule evaluation, atomic cooldown claims, provider calls, and browser delivery acknowledgments.
 
 ## Validation
 

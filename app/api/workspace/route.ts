@@ -1,3 +1,5 @@
+import { demoCameras, demoWorkflow } from "@/lib/demo";
+import { save } from "@/lib/server";
 import {
   identity,
   ensureSeed,
@@ -12,6 +14,22 @@ export async function GET() {
     const user = await identity();
     await ensureSeed(user.userId);
     const settings = await readOne(user.userId, "settings", "workspace");
+    // Upgrade only built-in demonstration records; never replace user camera sources.
+    const cameraRecords = await readAll(user.userId, "cameras");
+    for (const camera of cameraRecords.filter(
+      (c) => c.source === "demo" && !c.url,
+    )) {
+      const upgraded = demoCameras.find((c) => c.id === camera.id);
+      if (upgraded) {
+        await save(user.userId, "cameras", {
+          ...upgraded,
+          createdAt: camera.createdAt,
+        });
+        const flow = demoWorkflow(upgraded);
+        if (!(await readOne(user.userId, "workflows", flow.id)))
+          await save(user.userId, "workflows", flow);
+      }
+    }
     // Enforce retention on every workspace load, including inactive camera histories.
     const cutoff = Date.now() - (settings?.retention || 30) * 86400000;
     await env
@@ -20,6 +38,22 @@ export async function GET() {
       )
       .bind(user.userId, cutoff)
       .run();
+    // Clip metadata and storage follow the same retention window as observations.
+    const expired = await env
+      .DB!.prepare(
+        "SELECT id FROM records WHERE owner=? AND kind='recordings' AND json_extract(data,'$.endedAt')<? LIMIT 100",
+      )
+      .bind(user.userId, cutoff)
+      .all<{ id: string }>();
+    for (const clip of expired.results) {
+      if (env.BUCKET) await env.BUCKET.delete(`${user.userId}/${clip.id}`);
+      await env
+        .DB!.prepare(
+          "DELETE FROM records WHERE owner=? AND kind='recordings' AND id=?",
+        )
+        .bind(user.userId, clip.id)
+        .run();
+    }
     const kinds = [
       "cameras",
       "events",
@@ -29,6 +63,7 @@ export async function GET() {
       "executions",
       "messages",
       "reports",
+      "recordings",
     ];
     const results = await Promise.all(
       kinds.map((k) => readAll(user.userId, k)),

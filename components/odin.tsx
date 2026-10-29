@@ -31,6 +31,7 @@ import { OdinContext, useOdinState, Page } from "./odin-context";
 import { Button, Modal, Empty, Spinner } from "./common";
 import { Dashboard, ActivityPage, CameraForm, EventDetail } from "./dashboard";
 import { Monitor } from "./monitor";
+import { MonitoringSession } from "./monitoring-session";
 import { WorkflowsPage } from "./workflows";
 const AnalyticsPage = lazy(() => import("./analytics"));
 import {
@@ -42,40 +43,26 @@ import {
   SettingsPage,
 } from "./views";
 const navs: { label: string; page: Page; icon: any; group: string }[] = [
-  { label: "Cameras", page: "cameras", icon: Camera, group: "MONITOR" },
-  { label: "Live viewer", page: "live", icon: Radio, group: "MONITOR" },
-  { label: "Activity", page: "activity", icon: Activity, group: "MONITOR" },
+  { label: "Cameras", page: "cameras", icon: Camera, group: "ALL" },
+  { label: "Live Viewer", page: "live", icon: Radio, group: "ALL" },
+  { label: "MCPs", page: "integrations", icon: Plug, group: "ALL" },
   {
     label: "Analytics",
     page: "analytics",
     icon: ChartNoAxesCombined,
-    group: "MONITOR",
+    group: "ALL",
   },
-  { label: "Triggers", page: "triggers", icon: Sparkles, group: "AUTOMATE" },
-  { label: "Workflows", page: "workflows", icon: Workflow, group: "AUTOMATE" },
-  {
-    label: "Integrations",
-    page: "integrations",
-    icon: Plug,
-    group: "AUTOMATE",
-  },
-  {
-    label: "Camera chat",
-    page: "chat",
-    icon: MessagesSquare,
-    group: "INTELLIGENCE",
-  },
-  { label: "Reports", page: "reports", icon: FileText, group: "INTELLIGENCE" },
-  {
-    label: "Face recognition",
-    page: "faces",
-    icon: ScanFace,
-    group: "INTELLIGENCE",
-  },
+  { label: "Triggers", page: "triggers", icon: Sparkles, group: "ALL" },
+  { label: "Workflows", page: "workflows", icon: Workflow, group: "ALL" },
+  { label: "Chat", page: "chat", icon: MessagesSquare, group: "ALL" },
+  { label: "PDF Summary", page: "reports", icon: FileText, group: "ALL" },
+  { label: "Face Recognition", page: "faces", icon: ScanFace, group: "ALL" },
+  { label: "History & Search", page: "activity", icon: Activity, group: "ALL" },
 ];
 export default function Odin() {
   const { context, toast } = useOdinState();
   const { data, loading, error, page, selectedId, navigate, refresh } = context;
+  const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false),
     [search, setSearch] = useState(false),
     [query, setQuery] = useState(""),
@@ -101,15 +88,15 @@ export default function Odin() {
   const unreviewed = data?.events.filter((e) => !e.acknowledged).length || 0;
   return (
     <OdinContext.Provider value={context}>
-      <div className="app-shell">
+      <div
+        className={`app-shell reference-ui ${collapsed ? "sidebar-collapsed" : ""}`}
+      >
         <aside className={`sidebar ${mobile ? "mobile-open" : ""}`}>
           <a href="#cameras" className="brand" onClick={() => go("cameras")}>
             <span className="brand-mark">
               <Eye size={25} strokeWidth={2.4} />
             </span>
-            <span>
-              odin<span className="brand-period">.</span>
-            </span>
+            <span>Odin</span>
             <span className="brand-tag">VISION OS</span>
           </a>
           <button className="workspace-switch" onClick={() => go("settings")}>
@@ -123,7 +110,7 @@ export default function Odin() {
             <ChevronDown size={14} />
           </button>
           <nav aria-label="Main navigation">
-            {["MONITOR", "AUTOMATE", "INTELLIGENCE"].map((group) => (
+            {["ALL"].map((group) => (
               <div className="nav-group" key={group}>
                 <div className="nav-label">{group}</div>
                 {navs
@@ -165,6 +152,13 @@ export default function Odin() {
             >
               <Settings size={18} />
               <span>Settings</span>
+            </button>
+            <button
+              className="nav-item collapse-sidebar"
+              onClick={() => setCollapsed((v) => !v)}
+            >
+              <PanelLeftClose size={16} />
+              <span>{collapsed ? "Expand" : "Collapse"}</span>
             </button>
             <div className="profile">
               <span className="avatar">
@@ -237,6 +231,7 @@ export default function Odin() {
               </button>
             </div>
           </header>
+          <MonitoringSession />
           <main className="content">
             {loading ? (
               <div className="boot">
