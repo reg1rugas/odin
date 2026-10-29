@@ -89,6 +89,12 @@ export function Monitor({
     [continuous, setContinuous] = useState(false),
     [selectedFlow, setSelectedFlow] = useState(""),
     [ready, setReady] = useState(false);
+  const [frameRect, setFrameRect] = useState({
+    left: 0,
+    top: 0,
+    width: 100,
+    height: 100,
+  });
   const video = useRef<HTMLVideoElement>(null),
     stream = useRef<MediaStream | null>(null),
     recorder = useRef<MediaRecorder | null>(null),
@@ -99,6 +105,32 @@ export function Monitor({
     inferenceError = useRef(false),
     generation = useRef(0);
   latest.current = odin;
+  useEffect(() => {
+    const element = video.current,
+      stage = element?.parentElement;
+    if (!element || !stage || !ready) return;
+    // Align boxes with the actual image when object-fit adds letterboxing.
+    const resize = () => {
+      if (!element.videoWidth || !stage.clientWidth || !stage.clientHeight)
+        return;
+      const scale = Math.min(
+        stage.clientWidth / element.videoWidth,
+        stage.clientHeight / element.videoHeight,
+      );
+      const width = element.videoWidth * scale,
+        height = element.videoHeight * scale;
+      setFrameRect({
+        left: ((stage.clientWidth - width) / 2 / stage.clientWidth) * 100,
+        top: ((stage.clientHeight - height) / 2 / stage.clientHeight) * 100,
+        width: (width / stage.clientWidth) * 100,
+        height: (height / stage.clientHeight) * 100,
+      });
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(stage);
+    resize();
+    return () => observer.disconnect();
+  }, [ready, started]);
   useEffect(() => {
     if (initial) {
       stop();
@@ -564,7 +596,16 @@ export function Monitor({
                   <span />
                   LIVE MONITORING
                 </div>
-                <div className="detection-layer">
+                <div
+                  className="detection-layer"
+                  style={{
+                    inset: "auto",
+                    left: `${frameRect.left}%`,
+                    top: `${frameRect.top}%`,
+                    width: `${frameRect.width}%`,
+                    height: `${frameRect.height}%`,
+                  }}
+                >
                   {predictions.map((p, i) => (
                     <div
                       className={`live-box ${p.class === "face" ? "face" : ""}`}
