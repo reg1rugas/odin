@@ -195,6 +195,7 @@ export function useOdinState() {
             status = "failed";
             message =
               e instanceof Error ? e.message : "Browser delivery failed.";
+            notify(`Workflow alert could not be delivered: ${message}`, "error");
           }
           await api(
             "executions",

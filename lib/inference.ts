@@ -1,3 +1,4 @@
+import { suppressDuplicates, type BoxDetection } from "./detection-options";
 // Models load on demand; no camera frames leave the browser for object/face detection.
 declare global {
   interface Window {
@@ -41,13 +42,39 @@ export async function objectDetector() {
         "https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js",
       );
       return (detector = await window.cocoSsd.load({
-        base: "lite_mobilenet_v2",
+        base: "mobilenet_v2",
       }));
     })().catch((e) => {
       loading = undefined;
       throw e;
     });
   return loading;
+}
+/** Serialize shared WebGL inference; crop mode trades throughput for smaller-object recall. */
+let detectionWork: Promise<unknown> = Promise.resolve();
+export function detectObjects(video: HTMLVideoElement, confidence: number, quality: "balanced" | "detail" = "balanced"): Promise<BoxDetection[]> {
+  const work = detectionWork.then(async () => {
+    const model = await objectDetector();
+    const full = document.createElement("canvas");
+    full.width = video.videoWidth;
+    full.height = video.videoHeight;
+    if (!full.width || !full.height) return [];
+    full.getContext("2d")!.drawImage(video, 0, 0);
+    const boxes: BoxDetection[] = await model.detect(full, 60, confidence);
+    if (quality === "detail") {
+      const crop = document.createElement("canvas");
+      const w = Math.ceil(full.width * 0.65), h = Math.ceil(full.height * 0.65);
+      crop.width = w; crop.height = h;
+      for (const [x, y] of [[0, 0], [full.width - w, 0], [0, full.height - h], [full.width - w, full.height - h]]) {
+        crop.getContext("2d")!.drawImage(full, x, y, w, h, 0, 0, w, h);
+        const detected: BoxDetection[] = await model.detect(crop, 40, confidence);
+        boxes.push(...detected.map(d => ({...d, bbox: [d.bbox[0] + x, d.bbox[1] + y, d.bbox[2], d.bbox[3]]})));
+      }
+    }
+    return suppressDuplicates(boxes);
+  });
+  detectionWork = work.catch(() => {});
+  return work;
 }
 let human: any;
 let humanLoading: Promise<any> | undefined;

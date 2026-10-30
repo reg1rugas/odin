@@ -14,9 +14,11 @@ import {
 } from "lucide-react";
 import { useOdin } from "./odin-context";
 import { Button, Modal, Badge, Empty } from "./common";
-import { objectDetector, faceDetector, captureFrame } from "@/lib/inference";
+import { detectObjects, faceDetector, captureFrame } from "@/lib/inference";
+import { submitTracks } from "@/lib/submit-tracks";
 import { CameraTracker } from "@/lib/tracking";
-import { queuedAnalysis } from "@/lib/analysis-queue";
+import { WorkflowAlerts } from "./workflow-alerts";
+import { useIncidentMonitor } from "./use-incident-monitor";
 import type { Camera } from "@/lib/types";
 let perception: Promise<unknown> = Promise.resolve();
 function serial<T>(work: () => Promise<T>): Promise<T> {
@@ -54,11 +56,10 @@ export function MonitoringSession() {
   return (
     <>
       <div className="monitor-session-workers">
-        {active.map((camera, index) => (
+        {active.map((camera) => (
           <CameraWorker
             key={camera.id}
             camera={camera}
-            index={index}
             onStatus={(text) =>
               setStatuses((s) =>
                 s[camera.id] === text ? s : { ...s, [camera.id]: text },
@@ -88,6 +89,7 @@ export function MonitoringSession() {
           </button>
         </div>
       )}
+      {active.length > 0 && <aside style={{position:"fixed",bottom:80,right:16,maxWidth:360,maxHeight:260,overflowY:"auto",zIndex:50}}><WorkflowAlerts cameraIds={active.map(c => c.id)} /></aside>}
       {open && (
         <Modal
           title="Monitor multiple cameras"
@@ -167,7 +169,7 @@ export function MonitoringSession() {
                   Object tracking runs locally. Face matches can connect an
                   enrolled person's sightings across cameras. Unknown track IDs
                   do not establish cross-camera identity. Cloud analysis is
-                  spaced and may skip cycles when your provider is busy. Closing
+                  triggered by activity and subject to an hourly limit. Closing
                   the app stops capture.
                 </p>
               </div>
@@ -206,11 +208,9 @@ export function MonitoringSession() {
 }
 function CameraWorker({
   camera,
-  index,
   onStatus,
 }: {
   camera: Camera;
-  index: number;
   onStatus: (text: string) => void;
 }) {
   const odin = useOdin();
@@ -219,6 +219,9 @@ function CameraWorker({
     video = useRef<HTMLVideoElement>(null);
   latest.current = odin;
   status.current = onStatus;
+  const captureStarted = useRef(0), captureSession = useRef("");
+  const incident = useIncidentMonitor(video, camera, odin.monitorAi, () => camera.source === "webcam" ? (Date.now() - captureStarted.current) / 1000 : video.current?.currentTime || 0, () => captureSession.current);
+  useEffect(() => { if (odin.monitorAi && incident.status) status.current(incident.status); }, [incident.status, odin.monitorAi]);
   useEffect(() => {
     let alive = true,
       media: MediaStream | null = null,
@@ -226,12 +229,10 @@ function CameraWorker({
       timer: ReturnType<typeof setTimeout>,
       segmentTimer: ReturnType<typeof setTimeout>,
       segmentBusy = false;
-    const tracker = new CameraTracker(),
-      last = new Map<string, number>(),
-      samples: { image: string; at: number }[] = [];
+    const tracker = new CameraTracker(), last = new Map<string, number>(), trackUpdates = new Map<string, number>();
     const sessionId = crypto.randomUUID();
-    let startedAt = Date.now(),
-      nextAnalysis = Date.now() + 20000 + index * 20000;
+    captureSession.current = sessionId;
+    let startedAt = Date.now(), previousSource = -1;
     const at = () =>
       camera.source === "webcam"
         ? (Date.now() - startedAt) / 1000
@@ -243,7 +244,7 @@ function CameraWorker({
       metadata: Record<string, unknown> = {},
     ) {
       const key = `${type}:${metadata.personId || metadata.trackId || ""}`;
-      if (Date.now() - (last.get(key) || 0) < 30000) return;
+      if (Date.now() - (last.get(key) || 0) < (metadata.trackId ? 5000 : 30000)) return;
       last.set(key, Date.now());
       const result = await latest.current.api("events", {
         cameraId: camera.id,
@@ -257,6 +258,7 @@ function CameraWorker({
         snapshot: captureFrame(video.current!, 480),
         ...metadata,
       });
+      if (result.event?.matchedLocalRuleIds?.length) incident.trigger("Local workflow condition matched");
       await latest.current.deliver(result.executions || []);
       await latest.current.refresh();
     }
@@ -326,26 +328,20 @@ function CameraWorker({
         return;
       }
       try {
-        const image = captureFrame(v, 480);
-        if (samples.length && at() < samples.at(-1)!.at) samples.length = 0;
-        samples.push({ image, at: at() });
-        if (samples.length > 6) samples.shift();
+        const currentSource = at();
+        if (currentSource < previousSource) {tracker.reset(); trackUpdates.clear();}
+        previousSource = currentSource;
         await serial(async () => {
           if (!alive) return;
-          const detector = await objectDetector();
           const detected = tracker.update(
-            await detector.detect(
-              v,
-              12,
-              latest.current.data!.settings.confidence,
-            ),
-            camera.id,
+            await detectObjects(v, latest.current.data!.settings.confidence, latest.current.data!.settings.detectionQuality),
+            camera.id, Date.now(), {width: v.videoWidth, height: v.videoHeight},
           );
-          for (const p of detected) {
-            if (!alive) return;
-            await emit(p.class, p.score, `${p.class} detected`, {
-              trackId: p.trackId,
-            });
+          incident.note(detected, v.videoWidth, v.videoHeight);
+          const result = await submitTracks({detections: detected, video: v, cameraId: camera.id, sourceTime: at(), sessionId, last: trackUpdates, spatialRulesActive: latest.current.data!.workflows.some(f => f.enabled && f.nodes.some(n => n.type === "input" && (!n.cameraId || n.cameraId === camera.id)) && f.nodes.some(n => n.ruleMode === "spatial")), api: latest.current.api});
+          if (result) {
+            if (result.events.some(e => e.matchedLocalRuleIds?.length)) incident.trigger("Local workflow condition matched");
+            await latest.current.deliver(result.executions); await latest.current.refresh();
           }
           if (
             latest.current.monitorFaces &&
@@ -382,24 +378,7 @@ function CameraWorker({
           }
         });
         if (!alive) return;
-        status.current("Monitoring · local detections active");
-        if (latest.current.monitorAi && Date.now() >= nextAnalysis) {
-          nextAnalysis = Date.now() + 60000;
-          try {
-            const result = await queuedAnalysis(() =>
-              latest.current.api("analyze", {
-                cameraId: camera.id,
-                frames: [...samples],
-                sourceTime: at(),
-                sessionId,
-              }),
-            );
-            await latest.current.deliver(result.executions || []);
-            await latest.current.refresh();
-          } catch (e) {
-            status.current((e as Error).message);
-          }
-        }
+        if (!latest.current.monitorAi) status.current("Monitoring · local detections active");
         if (!latest.current.recordClips && recorder?.state === "recording") {
           clearTimeout(segmentTimer);
           recorder.stop();
@@ -434,6 +413,7 @@ function CameraWorker({
         }
         await v.play();
         startedAt = Date.now();
+        captureStarted.current = startedAt;
         status.current("Loading detection models…");
         if (latest.current.recordClips) startSegment();
         void tick();

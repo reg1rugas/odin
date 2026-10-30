@@ -38,6 +38,8 @@ export async function GET() {
       )
       .bind(user.userId, cutoff)
       .run();
+    await env.DB!.prepare("DELETE FROM records WHERE owner=? AND kind IN ('incidents','ai_usage') AND json_extract(data,'$.timestamp')<?").bind(user.userId, cutoff).run();
+    await env.DB!.prepare("DELETE FROM records WHERE owner=? AND kind='ai_budgets' AND updated_at<?").bind(user.userId, Date.now() - 3600000).run();
     // Clip metadata and storage follow the same retention window as observations.
     const expired = await env
       .DB!.prepare(
@@ -64,6 +66,8 @@ export async function GET() {
       "messages",
       "reports",
       "recordings",
+      "incidents",
+      "ai_usage",
     ];
     const results = await Promise.all(
       kinds.map((k) => readAll(user.userId, k)),

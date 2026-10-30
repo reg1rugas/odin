@@ -55,10 +55,11 @@ export function EventSearch() {
   const open = (event: Event) => {
     const camera = data!.cameras.find((c) => c.id === event.cameraId);
     if (camera?.source === "webcam" || !camera) {
+      const incident = data!.incidents?.find(i => i.id === event.incidentId);
       const clip = data!.recordings.find(
         (r) =>
           r.cameraId === event.cameraId &&
-          r.sessionId === event.sessionId &&
+          (incident ? incident.recordingIds.includes(r.id) : r.sessionId === event.sessionId) &&
           event.sourceTime !== undefined &&
           event.sourceTime >= r.sourceOffset &&
           event.sourceTime <= r.sourceOffset + r.duration,
@@ -191,6 +192,7 @@ export function EventSearch() {
                         </Badge>
                       )}
                       {event.trackId && <Badge>{event.trackId}</Badge>}
+                      {event.trackId && <small>{event.observationCount || 1} sightings · first {time(event.firstSeen ?? event.timestamp)} · last {time(event.lastSeen ?? event.timestamp)}</small>}
                     </div>
                     <Badge tone={event.severity}>{event.severity}</Badge>
                   </button>

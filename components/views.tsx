@@ -1,4 +1,5 @@
 "use client";
+import { OBJECT_CLASSES } from "@/lib/detection-options";
 import { useEffect, useRef, useState } from "react";
 import { DEFAULT_GEMINI_MODEL } from "@/lib/gemini-model";
 import {
@@ -1152,8 +1153,21 @@ export function SettingsPage() {
   async function save() {
     setBusy(true);
     try {
-      await persist("settings", settings);
+      await persist("settings", { ...settings, model: settings.model.trim() });
       notify("Workspace settings saved");
+    } catch (e) {
+      notify((e as Error).message, "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function applyModel() {
+    setBusy(true);
+    try {
+      const model = settings.model.trim();
+      await persist("settings", { ...data!.settings, model });
+      setSettings((current) => ({ ...current, model }));
+      notify(`Gemini model saved: ${model}`);
     } catch (e) {
       notify((e as Error).message, "error");
     } finally {
@@ -1294,9 +1308,22 @@ export function SettingsPage() {
               </div>
               <Badge tone="lime">Ready to use</Badge>
             </div>
+            <Field label="Detection detail" hint="MobileNet V2 recognizes 80 COCO categories. Detail mode also scans four overlapping crops for small objects and takes longer, especially with multiple cameras.">
+              <select value={settings.detectionQuality || "balanced"} onChange={(e) => setSettings({...settings, detectionQuality: e.target.value as "balanced" | "detail"})}>
+                <option value="balanced">Balanced · full frame, up to 60 detections</option>
+                <option value="detail">Detail · full frame plus four crops</option>
+              </select>
+            </Field>
+            <details><summary>Supported object categories ({OBJECT_CLASSES.length})</summary><p>{OBJECT_CLASSES.join(" · ")}</p></details>
+            <Field label="Automatic AI analyses per camera per hour" hint="Server-enforced limit for incident clips. Manual frame analysis is separate.">
+              <input type="number" min={1} max={120} value={settings.aiChecksPerHour ?? 12} onChange={(e) => setSettings({...settings, aiChecksPerHour: Number(e.target.value)})} />
+            </Field>
+            <Field label="Fallback Gemini model" hint="Optional. Used after temporary service failures; invalid keys and exhausted quotas do not trigger fallback.">
+              <input value={settings.fallbackModel || ""} placeholder="gemini-3.5-flash-lite" onChange={(e) => setSettings({...settings, fallbackModel: e.target.value})} />
+            </Field>
             <Field
               label={`Object confidence threshold · ${Math.round(settings.confidence * 100)}%`}
-              hint="Higher values reduce uncertain detections."
+              hint="Higher values reduce uncertain detections. Try 45–55% if real objects are being missed; lower thresholds can add false positives."
             >
               <input
                 type="range"
@@ -1375,7 +1402,7 @@ export function SettingsPage() {
             </div>
             <Field
               label="Gemini model"
-              hint={`Default: ${DEFAULT_GEMINI_MODEL}. You can enter another model available to your API key.`}
+              hint={`Default: ${DEFAULT_GEMINI_MODEL}. Enter a model ID available to your key, then select Apply model.`}
             >
               <input
                 value={settings.model}
@@ -1384,6 +1411,19 @@ export function SettingsPage() {
                 }
                 placeholder={DEFAULT_GEMINI_MODEL}
               />
+              <div className="key-actions">
+                <span>
+                  {settings.model.trim() === data!.settings.model
+                    ? `Saved model: ${data!.settings.model}`
+                    : "Model change not saved yet"}
+                </span>
+                <Button
+                  disabled={busy || !settings.model.trim() || settings.model.trim() === data!.settings.model}
+                  onClick={() => void applyModel()}
+                >
+                  Apply model <Check size={13} />
+                </Button>
+              </div>
             </Field>
           </section>
           <section
@@ -1521,7 +1561,7 @@ export function TriggersPage() {
       title: string;
       description: string;
       detectionClass: string;
-      ruleMode: "object" | "semantic";
+      ruleMode: "object" | "semantic" | "spatial";
     } | null>(null),
     [busy, setBusy] = useState(false);
   const rules = data!.workflows
@@ -1716,7 +1756,7 @@ export function TriggersPage() {
                 <option value="object">
                   On-device object, face, or motion detection
                 </option>
-                <option value="semantic">AI scene understanding</option>
+                <option value="spatial">Local spatial rule · edit geometry in workflow</option><option value="semantic">AI scene understanding</option>
               </select>
             </Field>
             <Field label="Detection class">

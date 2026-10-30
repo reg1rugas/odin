@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const pattern = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
     const rows = await env
       .DB!.prepare(
-        "SELECT data FROM records WHERE owner=? AND kind='events' AND (?='' OR data LIKE ? ESCAPE '\\') AND (?='' OR json_extract(data,'$.cameraId')=?) AND (?='' OR json_extract(data,'$.personId')=?) AND json_extract(data,'$.timestamp')>=? AND json_extract(data,'$.timestamp')<=? ORDER BY json_extract(data,'$.timestamp') DESC LIMIT 200",
+        "SELECT data FROM records WHERE owner=? AND kind='events' AND (?='' OR data LIKE ? ESCAPE '\\') AND (?='' OR json_extract(data,'$.cameraId')=?) AND (?='' OR json_extract(data,'$.personId')=?) AND COALESCE(json_extract(data,'$.lastSeen'),json_extract(data,'$.timestamp'))>=? AND COALESCE(json_extract(data,'$.firstSeen'),json_extract(data,'$.timestamp'))<=? ORDER BY json_extract(data,'$.timestamp') DESC LIMIT 200",
       )
       .bind(u.userId, q, pattern, camera, camera, person, person, from, to)
       .all<{ data: string }>();

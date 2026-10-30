@@ -1,4 +1,5 @@
 "use client";
+import { OBJECT_CLASSES } from "@/lib/detection-options";
 import { useEffect, useRef, useState } from "react";
 import {
   Workflow as WorkflowIcon,
@@ -381,7 +382,7 @@ export function WorkflowEditor({
       ...(type === "input"
         ? { cameraId: data!.cameras[0]?.id }
         : type === "rule"
-          ? { detectionClass: "person", ruleMode: "semantic" as const }
+          ? { detectionClass: "person", ruleMode: "object" as const }
           : { action: "browser", cooldown: 60 }),
     };
     update({ ...flow, nodes: [...flow.nodes, node] });
@@ -991,13 +992,13 @@ export function WorkflowEditor({
       {editing && (
         <NodeEditor
           node={editing}
+          previewCameraId={flow.nodes.find(n => n.type === "input")?.cameraId}
           onClose={() => setEditing(null)}
           onSave={(n) => {
-            update({
-              ...flow,
-              nodes: flow.nodes.map((x) => (x.id === n.id ? n : x)),
-            });
+            const next = {...flow, nodes: flow.nodes.map(x => x.id === n.id ? n : x)};
+            update(next);
             setEditing(null);
+            void saveFlow(next);
           }}
           onDelete={() => {
             update({
@@ -1065,19 +1066,28 @@ function EyeLogo() {
 }
 function NodeEditor({
   node,
+  previewCameraId,
   onClose,
   onSave,
   onDelete,
 }: {
   node: FlowNode;
+  previewCameraId?: string;
   onClose: () => void;
   onSave: (n: FlowNode) => void;
   onDelete: () => void;
 }) {
   const { data } = useOdin();
   const [draft, setDraft] = useState({ ...node }),
+    [previewCamera, setPreviewCamera] = useState(previewCameraId || data!.cameras[0]?.id || ""),
     [showTools, setShowTools] = useState(false),
     [error, setError] = useState("");
+  const regionImage = data!.events.find(e => e.cameraId === previewCamera && e.snapshot)?.snapshot || data!.cameras.find(c => c.id === previewCamera)?.thumbnail;
+  const line = draft.spatial?.points;
+  const dx = line?.length === 2 ? line[1].x - line[0].x : 0;
+  const dy = line?.length === 2 ? line[1].y - line[0].y : 1;
+  const positiveDirection = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? "Top to bottom" : "Bottom to top") : (dy >= 0 ? "Right to left" : "Left to right");
+  const negativeDirection = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? "Bottom to top" : "Top to bottom") : (dy >= 0 ? "Left to right" : "Right to left");
   const change = (key: string, value: any) =>
     setDraft((d) => ({ ...d, [key]: value }));
   return (
@@ -1097,7 +1107,10 @@ function NodeEditor({
               return;
             }
           }
-          onSave(draft);
+          if (draft.ruleMode === "spatial" && (!draft.spatial || (draft.spatial.kind === "line_cross" ? draft.spatial.points.length !== 2 : draft.spatial.points.length < 3))) {
+            setError("Draw the region before saving this rule."); return;
+          }
+          onSave(draft.type === "rule" ? {...draft, detectionClass: draft.detectionClass || "person", ruleMode: draft.ruleMode || "object"} : draft);
         }}
       >
         <Field label="Title">
@@ -1171,16 +1184,50 @@ function NodeEditor({
             <Field label="Evaluation mode">
               <select
                 value={draft.ruleMode || "object"}
-                onChange={(e) => change("ruleMode", e.target.value)}
+                onChange={(e) => {
+                  change("ruleMode", e.target.value);
+                  if (e.target.value === "spatial" && ["motion", "known_face", "unknown_face"].includes(draft.detectionClass || "")) change("detectionClass", "person");
+                  if (e.target.value === "spatial" && !draft.spatial)
+                    change("spatial", {kind: "zone_enter", points: [{x: 0.2, y: 0.2}, {x: 0.8, y: 0.2}, {x: 0.8, y: 0.8}, {x: 0.2, y: 0.8}], seconds: 30, direction: "either"});
+                }}
               >
                 <option value="object">
                   On-device object, face, or motion detection
                 </option>
+                <option value="spatial">Local zone, line crossing, or dwell time</option>
                 <option value="semantic">
                   AI scene understanding (description above)
                 </option>
               </select>
             </Field>
+            {draft.ruleMode === "spatial" && draft.spatial && (
+              <div>
+                <Field label="Movement condition">
+                  <select value={draft.spatial.kind} onChange={(e) => change("spatial", {...draft.spatial, kind: e.target.value, points: e.target.value === "line_cross" ? [{x: 0.5, y: 0.1}, {x: 0.5, y: 0.9}] : [{x: 0.2, y: 0.2}, {x: 0.8, y: 0.2}, {x: 0.8, y: 0.8}, {x: 0.2, y: 0.8}]})}>
+                    <option value="zone_enter">Enters zone</option><option value="zone_exit">Exits zone</option><option value="dwell">Remains in zone</option><option value="line_cross">Crosses line</option>
+                  </select>
+                </Field>
+                <Field label="Camera preview" hint="The rule applies to the workflow's connected camera input."><select value={previewCamera} onChange={(e) => setPreviewCamera(e.target.value)}>{data!.cameras.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+                {!regionImage && <p>No snapshot yet. Start monitoring this camera to obtain a preview, or draw using frame-relative coordinates.</p>}
+                <p>Click to draw {draft.spatial.kind === "line_cross" ? "two line endpoints" : "a polygon (at least three corners)"}. Coordinates are relative to the full camera frame. The tracked object center is used.</p>
+                <svg viewBox="0 0 100 100" role="img" aria-label="Draw workflow region" style={{width: "100%", height: 220, background: "#eef0f4", cursor: "crosshair"}} preserveAspectRatio="none" onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const points = draft.spatial!.points;
+                  const max = draft.spatial!.kind === "line_cross" ? 2 : 12;
+                  if (points.length >= max) return;
+                  change("spatial", {...draft.spatial, points: [...points, {x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)), y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))}]});
+                }}>
+                  {regionImage && <image href={regionImage} x="0" y="0" width="100" height="100" preserveAspectRatio="none" />}
+                  {draft.spatial.kind === "line_cross" ? <polyline points={draft.spatial.points.map(p => `${p.x * 100},${p.y * 100}`).join(" ")} stroke="#c00074" fill="none" strokeWidth="1" /> : <polygon points={draft.spatial.points.map(p => `${p.x * 100},${p.y * 100}`).join(" ")} stroke="#c00074" fill="#c0007420" strokeWidth="1" />}
+                  {draft.spatial.points.map((p, i) => <circle key={i} cx={p.x * 100} cy={p.y * 100} r="1.5" fill="#c00074" />)}
+                </svg>
+                <Button onClick={() => change("spatial", {...draft.spatial, points: []})}>Redraw region</Button>
+                <Button onClick={() => change("spatial", {...draft.spatial, points: draft.spatial!.points.slice(0, -1)})}>Undo point</Button>
+                {draft.spatial.kind === "dwell" && <Field label="Seconds continuously inside"><input type="number" min={1} max={3600} value={draft.spatial.seconds || 30} onChange={(e) => change("spatial", {...draft.spatial, seconds: Number(e.target.value)})} /></Field>}
+                {draft.spatial.kind === "line_cross" && <Field label="Crossing direction"><select value={draft.spatial.direction || "either"} onChange={(e) => change("spatial", {...draft.spatial, direction: e.target.value})}><option value="either">Either direction</option><option value="positive">{positiveDirection}</option><option value="negative">{negativeDirection}</option></select></Field>}
+                <small>Use a live camera view to identify the region before drawing. Crossing direction follows the orientation of the drawn line. Geometry can be adjusted without cloud AI.</small>
+              </div>
+            )}
             {draft.ruleMode === "semantic" && (
               <div className="info-box">
                 <Sparkles size={18} />
@@ -1203,28 +1250,7 @@ function NodeEditor({
                 value={draft.detectionClass || "person"}
                 onChange={(e) => change("detectionClass", e.target.value)}
               >
-                {[
-                  "person",
-                  "car",
-                  "truck",
-                  "bicycle",
-                  "motorcycle",
-                  "bus",
-                  "backpack",
-                  "handbag",
-                  "suitcase",
-                  "dog",
-                  "cat",
-                  "bird",
-                  "bottle",
-                  "chair",
-                  "cell phone",
-                  "laptop",
-                  "motion",
-                  "known_face",
-                  "unknown_face",
-                  "*",
-                ].map((c) => (
+                {[...OBJECT_CLASSES, ...(draft.ruleMode === "spatial" ? [] : ["motion", "known_face", "unknown_face"]), "*"].map((c) => (
                   <option key={c} value={c}>
                     {c === "*" ? "Any event" : c.replace(/_/g, " ")}
                   </option>
@@ -1372,7 +1398,7 @@ export function ExecutionHistory({ workflowId }: { workflowId?: string }) {
                       ? "lime"
                       : ex.status === "failed"
                         ? "critical"
-                        : "warning"
+                        : ex.status === "skipped" ? "neutral" : "warning"
                   }
                 >
                   {ex.status}
@@ -1391,7 +1417,7 @@ export function ExecutionHistory({ workflowId }: { workflowId?: string }) {
                           ? "lime"
                           : r.status === "pending"
                             ? "orange"
-                            : "critical"
+                            : r.status === "skipped" ? "neutral" : "critical"
                       }
                     >
                       {r.status}

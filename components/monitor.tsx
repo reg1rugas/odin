@@ -22,11 +22,14 @@ import {
   Mic,
   Volume2,
 } from "lucide-react";
+import { WorkflowAlerts } from "./workflow-alerts";
+import { useIncidentMonitor } from "./use-incident-monitor";
 import { useOdin } from "./odin-context";
 import { Button, Badge, Empty, Spinner, Modal, Toggle } from "./common";
 import { CameraForm } from "./dashboard";
 import { WorkflowEditor, ExecutionHistory } from "./workflows";
-import { objectDetector, faceDetector, captureFrame } from "@/lib/inference";
+import { objectDetector, detectObjects, faceDetector, captureFrame } from "@/lib/inference";
+import { submitTracks } from "@/lib/submit-tracks";
 import { CameraTracker } from "@/lib/tracking";
 import { queuedAnalysis } from "@/lib/analysis-queue";
 import { demoTimeline } from "@/lib/demo";
@@ -82,7 +85,6 @@ export function Monitor({
     [predictions, setPredictions] = useState<any[]>([]),
     [currentTime, setCurrentTime] = useState(0),
     [continuous, setContinuous] = useState(false),
-    [interval, setIntervalSeconds] = useState(60),
     [analyzing, setAnalyzing] = useState(false),
     [summary, setSummary] = useState(""),
     [edit, setEdit] = useState(false),
@@ -104,20 +106,23 @@ export function Monitor({
     generation = useRef(0),
     lastDetection = useRef<Record<string, number>>({}),
     tracker = useRef(new CameraTracker()),
+    trackUpdates = useRef(new Map<string, number>()),
+    previousSource = useRef(-1),
+    captureSession = useRef(""),
     samples = useRef<{ image: string; at: number }[]>([]),
     recorder = useRef<MediaRecorder | null>(null),
     chunks = useRef<Blob[]>([]),
     previousPixels = useRef<Uint8ClampedArray | null>(null),
-    analyzingRef = useRef(false),
-    analysisTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-      undefined,
-    );
+    analyzingRef = useRef(false);
   latest.current = odin;
   const demo = camera.source === "demo";
+  const spatialRules = data!.workflows.filter(f => f.enabled && f.nodes.some(n => n.type === "input" && (!n.cameraId || n.cameraId === camera.id)))
+    .flatMap(f => f.nodes.filter(n => n.type === "rule" && n.ruleMode === "spatial" && n.spatial).map(n => ({key: `${f.id}:${n.id}`, node: n})));
   const sourceTime = () =>
     camera.source === "webcam"
       ? (Date.now() - startedAt.current) / 1000
       : video.current?.currentTime || 0;
+  const incident = useIncidentMonitor(video, camera, continuous && started && ready && !demo, sourceTime, () => captureSession.current);
   function stop() {
     generation.current++;
     stream.current?.getTracks().forEach((t) => t.stop());
@@ -138,7 +143,6 @@ export function Monitor({
       generation.current++;
       stream.current?.getTracks().forEach((t) => t.stop());
       if (recorder.current?.state === "recording") recorder.current.stop();
-      clearTimeout(analysisTimer.current);
     },
     [],
   );
@@ -213,6 +217,10 @@ export function Monitor({
         await persist("cameras", { ...camera, createdAt: Date.now() });
       if (attempt !== generation.current) return;
       startedAt.current = Date.now();
+      captureSession.current = crypto.randomUUID();
+      tracker.current = new CameraTracker();
+      trackUpdates.current.clear();
+      lastDetection.current = {};
       setStarted(true);
       await video.current?.play();
     } catch (e) {
@@ -236,7 +244,7 @@ export function Monitor({
   ) {
     const key = `${type}:${metadata.personId || metadata.trackId || ""}`;
     const now = Date.now();
-    if (now - (lastDetection.current[key] || 0) < 30000) return;
+    if (now - (lastDetection.current[key] || 0) < (metadata.trackId ? 5000 : 30000)) return;
     lastDetection.current[key] = now;
     try {
       let snapshot: string | undefined;
@@ -245,6 +253,7 @@ export function Monitor({
       } catch {}
       const result = await latest.current.api("events", {
         cameraId: camera.id,
+        sessionId: captureSession.current,
         type,
         confidence,
         title,
@@ -254,6 +263,7 @@ export function Monitor({
         snapshot,
         ...metadata,
       });
+      if (result.event?.matchedLocalRuleIds?.length) incident.trigger("Local workflow condition matched");
       await latest.current.deliver(result.executions || []);
       await latest.current.refresh();
     } catch (e) {
@@ -273,6 +283,9 @@ export function Monitor({
         return;
       }
       try {
+        const at = sourceTime();
+        if (at < previousSource.current) {tracker.current.reset(); trackUpdates.current.clear(); previousPixels.current = null;}
+        previousSource.current = at;
         const boxes: any[] = [];
         if (objects) {
           if (!detector) {
@@ -281,27 +294,25 @@ export function Monitor({
             if (!alive) return;
           }
           const detected = tracker.current.update(
-            await detector.detect(
-              v,
-              15,
-              latest.current.data!.settings.confidence,
-            ),
-            camera.id,
+            await detectObjects(v, latest.current.data!.settings.confidence, latest.current.data!.settings.detectionQuality),
+            camera.id, Date.now(), {width: v.videoWidth, height: v.videoHeight},
           );
           if (!alive) return;
+          incident.note(detected, v.videoWidth, v.videoHeight);
           for (const p of detected) {
             if (!alive) return;
             boxes.push({
               ...p,
               label: `${p.class} #${p.trackId?.split("-").at(-1)} ${Math.round(p.score * 100)}%`,
             });
-            await recordEvent(
-              p.class,
-              p.score,
-              `${p.class} detected`,
-              `${p.class} observed in ${camera.name}.`,
-              { trackId: p.trackId },
-            );
+
+          }
+        }
+        if (objects) {
+          const result = await submitTracks({detections: boxes, video: v, cameraId: camera.id, sourceTime: sourceTime(), sessionId: captureSession.current, last: trackUpdates.current, spatialRulesActive: latest.current.data!.workflows.some(f => f.enabled && f.nodes.some(n => n.type === "input" && (!n.cameraId || n.cameraId === camera.id)) && f.nodes.some(n => n.ruleMode === "spatial")), api: latest.current.api});
+          if (result) {
+            if (result.events.some(e => e.matchedLocalRuleIds?.length)) incident.trigger("Local workflow condition matched");
+            await latest.current.deliver(result.executions); await latest.current.refresh();
           }
         }
         if (faces) {
@@ -382,9 +393,8 @@ export function Monitor({
       } catch (e) {
         if (alive) {
           setError((e as Error).message);
-          setModelState("Detection unavailable");
+          setModelState("Detection update failed · retrying…");
         }
-        return;
       }
       if (alive) timer = setTimeout(scan, 1000);
     }
@@ -422,6 +432,7 @@ export function Monitor({
         latest.current.api("analyze", {
           cameraId: camera.id,
           frames,
+          sessionId: captureSession.current,
           sourceTime: sourceTime(),
         }),
       );
@@ -436,19 +447,6 @@ export function Monitor({
       analyzingRef.current = false;
     }
   }
-  useEffect(() => {
-    if (!continuous || !started || demo) return;
-    let alive = true;
-    const tick = async () => {
-      await analyze();
-      if (alive) analysisTimer.current = setTimeout(tick, interval * 1000);
-    };
-    analysisTimer.current = setTimeout(tick, interval * 1000);
-    return () => {
-      alive = false;
-      clearTimeout(analysisTimer.current);
-    };
-  }, [continuous, started, interval, camera.id]);
   function snapshot() {
     try {
       const a = document.createElement("a");
@@ -677,6 +675,12 @@ export function Monitor({
                   height: `${frameRect.height}%`,
                 }}
               >
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Active workflow regions and tracked object centers" style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}}>
+                  {spatialRules.map(({key,node}) => node.spatial!.kind === "line_cross"
+                    ? <polyline key={key} points={node.spatial!.points.map(p => `${p.x*100},${p.y*100}`).join(" ")} fill="none" stroke="#ffcf33" strokeWidth="2" vectorEffect="non-scaling-stroke"><title>{node.title} · line crossing</title></polyline>
+                    : <polygon key={key} points={node.spatial!.points.map(p => `${p.x*100},${p.y*100}`).join(" ")} fill="#ffcf3318" stroke="#ffcf33" strokeWidth="2" vectorEffect="non-scaling-stroke"><title>{node.title} · {node.spatial!.kind}</title></polygon>)}
+                  {predictions.filter(p => p.trackId).map(p => <circle key={p.trackId} cx={(p.bbox[0]+p.bbox[2]/2)/p.width*100} cy={(p.bbox[1]+p.bbox[3]/2)/p.height*100} r="0.7" fill="#00ffff" />)}
+                </svg>
                 {predictions.map((p, i) => (
                   <div
                     className={`live-box ${p.class === "face" ? "face" : ""}`}
@@ -793,19 +797,9 @@ export function Monitor({
                     }
                     onChange={(e) => setContinuous(e.target.checked)}
                   />
-                  Continuous
+                  Incident clips
                 </label>
-                <select
-                  aria-label="Analysis interval"
-                  value={interval}
-                  onChange={(e) => setIntervalSeconds(Number(e.target.value))}
-                >
-                  {[20, 30, 60, 120].map((s) => (
-                    <option value={s} key={s}>
-                      {s}s interval
-                    </option>
-                  ))}
-                </select>
+                <small>10s pre-buffer · 10–30s activity · hourly limit {data!.settings.aiChecksPerHour ?? 12}</small>
                 <Button
                   disabled={!started || analyzing}
                   onClick={() => void analyze()}
@@ -819,12 +813,15 @@ export function Monitor({
               </div>
             </>
           )}
+          {started && !demo && <p className="muted">{!objects ? "Enable object detection to evaluate line and zone rules." : spatialRules.length ? `${spatialRules.length} active spatial rules · yellow regions, cyan object centers. Crossing and exit use the center, not the box edge.` : "No active line or zone rules for this camera. Save and enable a connected workflow to activate them."}</p>}
+          <WorkflowAlerts cameraIds={[camera.id]} />
           {error && (
             <div className="inline-error">
               <TriangleAlert size={15} />
               {error}
             </div>
           )}
+          {continuous && incident.status && <p className="analysis-summary" role="status">{incident.status}</p>}
           {summary && (
             <div className="analysis-summary">
               <Badge tone="purple">Scene understanding</Badge>

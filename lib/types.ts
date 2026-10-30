@@ -27,8 +27,17 @@ export type Event = {
   personId?: string;
   personName?: string;
   trackId?: string;
+  firstSeen?: number;
+  lastSeen?: number;
+  observationCount?: number;
+  position?: { x: number; y: number; at: number };
+  movement?: {direction: string; framePercentPerSecond: number};
+  trail?: { x: number; y: number; at: number }[];
   matchedRuleIds?: string[];
   origin?: "local" | "ai" | "demo";
+  matchedLocalRuleIds?: string[];
+  spatialState?: Record<string, { signature: string; inside?: boolean; since?: number; fired?: boolean; point?: {x: number; y: number}; at: number }>;
+  incidentId?: string;
 };
 export type FlowNode = {
   id: string;
@@ -39,7 +48,8 @@ export type FlowNode = {
   y: number;
   cameraId?: string;
   detectionClass?: string;
-  ruleMode?: "object" | "semantic";
+  ruleMode?: "object" | "semantic" | "spatial";
+  spatial?: { kind: "zone_enter" | "zone_exit" | "line_cross" | "dwell"; points: {x: number; y: number}[]; seconds?: number; direction?: "either" | "positive" | "negative" };
   action?: string;
   destination?: string;
   integrationId?: string;
@@ -79,13 +89,19 @@ export type Execution = {
   workflowName: string;
   eventId: string;
   eventTitle: string;
+  cameraId?: string;
+  trackId?: string;
+  sourceTime?: number;
+  sessionId?: string;
+  incidentId?: string;
+  origin?: Event["origin"];
   timestamp: number;
   visitedNodes?: string[];
-  status: "success" | "failed" | "partial" | "pending";
+  status: "success" | "failed" | "partial" | "pending" | "skipped";
   results: {
     nodeId: string;
     action: string;
-    status: "success" | "failed" | "pending";
+    status: "success" | "failed" | "pending" | "skipped";
     message: string;
   }[];
 };
@@ -114,6 +130,9 @@ export type Settings = {
   confidence: number;
   retention: number;
   model: string;
+  detectionQuality?: "balanced" | "detail";
+  aiChecksPerHour?: number;
+  fallbackModel?: string;
 };
 export type Workspace = {
   cameras: Camera[];
@@ -125,6 +144,8 @@ export type Workspace = {
   messages: ChatMessage[];
   reports: Report[];
   recordings: Recording[];
+  incidents?: Incident[];
+  ai_usage?: AIUsage[];
   settings: Settings;
   user: { name: string; email: string };
   capabilities: { ai: boolean; email: boolean; sms: boolean; call: boolean };
@@ -141,3 +162,10 @@ export type Recording = {
   duration: number;
   sessionId: string;
 };
+
+export type Incident = {
+  id: string; cameraId: string; sessionId: string; timestamp: number;
+  reason: string; status: "pending" | "verified" | "uncertain" | "failed" | "skipped";
+  recordingIds: string[]; summary: string; model?: string;
+};
+export type AIUsage = {id: string; timestamp: number; model: string; feature: string; incidentId?: string; inputTokens: number; outputTokens: number; thinkingTokens: number; totalTokens: number};

@@ -1,9 +1,11 @@
 export class GeminiRequestError extends Error {
   status: number;
-  constructor(message: string, status = 502) {
+  upstreamStatus?: number;
+  constructor(message: string, status = 502, upstreamStatus?: number) {
     super(message);
     this.name = "GeminiRequestError";
     this.status = status;
+    this.upstreamStatus = upstreamStatus;
   }
 }
 
@@ -28,6 +30,9 @@ type GeminiOptions = {
   json?: boolean;
   timeoutMs?: number;
   fetcher?: typeof fetch;
+  maxRetries?: number;
+  sleep?: (ms: number) => Promise<void>;
+  onUsage?: (usage: { inputTokens: number; outputTokens: number; thinkingTokens: number; totalTokens: number }) => Promise<void>;
   log?: (details: Record<string, unknown>) => void;
 };
 
@@ -38,11 +43,23 @@ export async function requestGemini({
   json = false,
   timeoutMs = 45000,
   fetcher = fetch,
+  maxRetries = 0,
+  sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms)),
+  onUsage,
   log = (details) => console.error("[Odin Gemini]", JSON.stringify(details)),
 }: GeminiOptions) {
   const started = Date.now();
   try {
-    const response = await fetcher(
+    let attempt = 0;
+    const retryingFetch: typeof fetch = async (url, options) => {
+      for (;;) {
+        const response = await fetcher(url, options);
+        if (![500, 502, 503, 504].includes(response.status) || attempt >= Math.min(2, maxRetries)) return response;
+        await response.body?.cancel();
+        await sleep(500 * 2 ** attempt++ + Math.random() * 250);
+      }
+    };
+    const response = await retryingFetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: "POST",
@@ -92,7 +109,14 @@ export async function requestGemini({
       throw new GeminiRequestError(
         reason ? `${hint} ${reason}` : hint,
         response.status === 429 ? 429 : 502,
+        response.status,
       );
+    }
+    const finish = data?.candidates?.[0]?.finishReason;
+    if (finish && finish !== "STOP") {
+      throw new GeminiRequestError(finish === "MAX_TOKENS"
+        ? "Gemini reached its output limit before completing the response. Try a shorter request."
+        : "Gemini did not complete a usable analysis. No rules were verified.");
     }
     const text = data?.candidates?.[0]?.content?.parts
       ?.filter((part: any) => !part.thought)
@@ -121,6 +145,10 @@ export async function requestGemini({
             ? "Gemini reached its output limit before completing the response. Try a shorter request."
             : "Gemini returned no answer. Try again with a simpler request.",
       );
+    }
+    if (onUsage && data?.usageMetadata) {
+      const count = (n: unknown) => typeof n === "number" && Number.isFinite(n) && n >= 0 ? n : 0;
+      await onUsage({inputTokens: count(data.usageMetadata.promptTokenCount), outputTokens: count(data.usageMetadata.candidatesTokenCount), thinkingTokens: count(data.usageMetadata.thoughtsTokenCount), totalTokens: count(data.usageMetadata.totalTokenCount)});
     }
     if (!json) return text;
     try {

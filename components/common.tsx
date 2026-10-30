@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import {
   X,
   LoaderCircle,
@@ -56,13 +56,14 @@ export function Modal({
   wide?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const closeFromKeyboard = useEffectEvent(() => onClose());
   useEffect(() => {
     const previous = document.activeElement as HTMLElement;
     const original = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     ref.current?.focus();
     const handle = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") closeFromKeyboard();
       if (e.key === "Tab") {
         const items = ref.current?.querySelectorAll<HTMLElement>(
           'button,input,select,textarea,a[href],[tabindex="0"]',
@@ -85,7 +86,9 @@ export function Modal({
       document.removeEventListener("keydown", handle);
       previous?.focus();
     };
-  }, [onClose]);
+    // Keep focus in the user's control across workspace polling and draft edits.
+    // The effect event reads the latest callback without restarting focus setup.
+  }, []);
   return (
     <div
       className="modal-backdrop"
@@ -271,6 +274,7 @@ export function EventRow({
         <span className="event-title">{event.title}</span>
         <span className="event-meta">
           {camera?.name || "Camera"} <span>·</span> {relative(event.timestamp)}
+          {event.trackId && <> · Track {event.trackId.split("-").at(-1)} · {event.observationCount || 1} sightings</>}
         </span>
         {!compact && (
           <span className="event-description">{event.description}</span>

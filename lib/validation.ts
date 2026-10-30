@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OBJECT_CLASSES } from "./detection-options.ts";
 const id = z.string().min(1).max(120);
 const short = z.string().trim().min(1).max(160);
 const text = z.string().max(5000);
@@ -23,7 +24,13 @@ export const nodeSchema = z.object({
   y: z.number().min(-5000).max(10000),
   cameraId: id.optional(),
   detectionClass: z.string().max(80).optional(),
-  ruleMode: z.enum(["object", "semantic"]).optional(),
+  ruleMode: z.enum(["object", "semantic", "spatial"]).optional(),
+  spatial: z.object({
+    kind: z.enum(["zone_enter", "zone_exit", "line_cross", "dwell"]),
+    points: z.array(z.object({x: z.number().min(0).max(1), y: z.number().min(0).max(1)})).min(2).max(12),
+    seconds: z.number().int().min(1).max(3600).optional(),
+    direction: z.enum(["either", "positive", "negative"]).optional(),
+  }).optional(),
   action: z
     .enum(["browser", "voice", "email", "sms", "call", "webhook", "mcp"])
     .optional(),
@@ -43,6 +50,18 @@ export const workflowSchema = z
     createdAt: z.number(),
   })
   .superRefine((flow, ctx) => {
+    for (const node of flow.nodes) {
+      if (node.ruleMode === "spatial") {
+        const r = node.spatial;
+        if (node.detectionClass && node.detectionClass !== "*" && !OBJECT_CLASSES.some(c => c === node.detectionClass)) ctx.addIssue({code: "custom", message: "Spatial rules require a supported object category or Any event. Use person for person movement; face/motion events do not have object tracks."});
+        if (!r || (r.kind === "line_cross" ? r.points.length !== 2 : r.points.length < 3))
+          ctx.addIssue({code: "custom", message: "Draw a polygon for a zone or two distinct points for a crossing line."});
+        if (r && r.kind !== "line_cross" && Math.abs(r.points.reduce((area, p, i) => { const q = r.points[(i+1) % r.points.length]; return area + p.x*q.y - q.x*p.y; },0)) < 0.00001)
+          ctx.addIssue({code: "custom", message: "A zone must enclose an area."});
+        if (r && r.points.every(p => p.x === r.points[0].x && p.y === r.points[0].y))
+          ctx.addIssue({code: "custom", message: "The rule geometry must have distinct points."});
+      }
+    }
     const ids = new Set(flow.nodes.map((n) => n.id));
     if (ids.size !== flow.nodes.length)
       ctx.addIssue({ code: "custom", message: "Node IDs must be unique." });
@@ -126,7 +145,15 @@ export const settingsSchema = z.object({
   voice: z.boolean(),
   confidence: z.number().min(0.3).max(0.99),
   retention: z.number().int().min(1).max(365),
-  model: short.regex(/^[a-zA-Z0-9.-]+$/),
+  detectionQuality: z.enum(["balanced", "detail"]).optional(),
+  aiChecksPerHour: z.number().int().min(1).max(120).optional(),
+  fallbackModel: z.string().trim().max(160).regex(/^(gemini-[a-zA-Z0-9.-]+)?$/).optional(),
+  model: short.regex(/^gemini-[a-zA-Z0-9.-]+$/, "Enter a Gemini model ID, for example gemini-3.5-flash-lite."),
+});
+const trackPosition = z.object({
+  x: z.number().finite().min(0).max(1),
+  y: z.number().finite().min(0).max(1),
+  at: z.number().finite().min(0),
 });
 export const eventInput = z.object({
   cameraId: id,
@@ -141,4 +168,9 @@ export const eventInput = z.object({
   personId: id.optional(),
   personName: z.string().max(160).optional(),
   trackId: id.optional(),
+  firstSeen: z.number().finite().min(0).optional(),
+  observationCount: z.number().int().min(1).max(100000000).optional(),
+  position: trackPosition.optional(),
+  movement: z.object({direction: z.string().max(30), framePercentPerSecond: z.number().finite().min(0).max(10000)}).optional(),
+  trail: z.array(trackPosition).max(120).optional(),
 });

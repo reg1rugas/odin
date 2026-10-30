@@ -85,6 +85,7 @@ export async function DELETE(request: Request) {
         )
         .bind(u.userId, id)
         .run();
+      await env.DB!.prepare("DELETE FROM records WHERE owner=? AND kind='incidents' AND json_extract(data,'$.cameraId')=?").bind(u.userId, id).run();
       const camera = await readOne(u.userId, kind, id);
       if (camera?.source === "upload" && env.BUCKET) {
         const key = camera.url.split("/").pop();

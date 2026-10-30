@@ -2,12 +2,8 @@
 export const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
 
 export function resolveGeminiModel(value: unknown): string {
-  if (
-    typeof value !== "string" ||
-    !/^[a-zA-Z0-9.-]+$/.test(value) ||
-    value === "gemini-2.5-flash"
-  ) {
+  if (typeof value !== "string" || !/^gemini-[a-zA-Z0-9.-]+$/.test(value.trim())) {
     return DEFAULT_GEMINI_MODEL;
   }
-  return value;
+  return value.trim();
 }

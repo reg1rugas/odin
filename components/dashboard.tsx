@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { IncidentHistory } from "./incident-history";
 import { EventSearch } from "./event-search";
 import {
   Camera as CameraIcon,
@@ -366,6 +367,7 @@ export function EventDetail({
   const [busy, setBusy] = useState(false);
   if (!event) return null;
   const camera = data?.cameras.find((c) => c.id === event.cameraId);
+  const alerts = (data?.executions || []).filter(ex => ex.eventId === event.id).sort((a,b) => b.timestamp-a.timestamp);
   async function acknowledge() {
     setBusy(true);
     try {
@@ -395,8 +397,33 @@ export function EventDetail({
         </div>
         <h3>{event.title}</h3>
         <p>{event.description}</p>
+        {!!alerts.length && <section className="analysis-summary" aria-label="Workflow alerts for this event">
+          <strong>Workflow alerts ({alerts.length})</strong>
+          {alerts.slice(0,20).map(alert => <div key={alert.id} style={{marginTop: 8}}>
+            <strong>{alert.eventTitle}</strong>{" "}<Badge tone={alert.status === "failed" ? "critical" : alert.status === "success" ? "lime" : "orange"}>{alert.status}</Badge>
+            <p>{alert.workflowName} · {time(alert.timestamp)}{alert.sourceTime !== undefined ? ` · video ${alert.sourceTime.toFixed(1)}s` : ""}</p>
+            {alert.results.map(result => <small key={result.nodeId} style={{display: "block"}}>{result.action}: {result.status} · {result.message}</small>)}
+          </div>)}
+        </section>}
+        {event.trackId && <p>Track ID: {event.trackId}. Tracks apply within this camera and capture session.</p>}
         {event.snapshot && <img src={event.snapshot} alt="Event snapshot" />}
+        {!!event.trail?.length && (
+          <div>
+            <p>Recent movement · {event.trail.length} sampled positions</p>
+            <svg viewBox="0 0 100 100" role="img" aria-label="Recent movement trail within the camera frame" style={{ width: "100%", maxHeight: 220, background: "#f3f4f6" }}>
+              <polyline points={event.trail.map((p) => `${p.x * 100},${p.y * 100}`).join(" ")} fill="none" stroke="#c00074" strokeWidth="1" />
+              <circle cx={event.trail.at(-1)!.x * 100} cy={event.trail.at(-1)!.y * 100} r="2" fill="#c00074" />
+            </svg>
+          </div>
+        )}
         <div className="detail-grid">
+          {event.trackId && <>
+            <div><span>First seen</span><strong>{date(event.firstSeen ?? event.timestamp)} {time(event.firstSeen ?? event.timestamp)}</strong></div>
+            <div><span>Last recorded sighting</span><strong>{date(event.lastSeen ?? event.timestamp)} {time(event.lastSeen ?? event.timestamp)}</strong></div>
+            {event.movement && <div><span>Recent movement in frame</span><strong>{event.movement.direction} · {event.movement.framePercentPerSecond.toFixed(1)}% frame/s</strong></div>}
+            <div><span>Observations</span><strong>{event.observationCount || 1}</strong></div>
+            {event.position && <div><span>Latest position (left / top)</span><strong>{Math.round(event.position.x * 100)}% / {Math.round(event.position.y * 100)}%</strong></div>}
+          </>}
           <div>
             <span>Confidence</span>
             <strong>{Math.round(event.confidence * 100)}%</strong>
@@ -457,7 +484,7 @@ export function ActivityPage({ onEvent }: { onEvent: (id: string) => void }) {
         (severity === "all" || e.severity === severity) &&
         (camera === "all" || e.cameraId === camera) &&
         (!onlyOpen || !e.acknowledged) &&
-        `${e.title} ${e.description}`
+        `${e.title} ${e.description} ${e.trackId || ""} ${e.personName || ""}`
           .toLowerCase()
           .includes(query.toLowerCase()),
     )
@@ -498,6 +525,7 @@ export function ActivityPage({ onEvent }: { onEvent: (id: string) => void }) {
           {busy ? "Reviewing…" : "Mark all reviewed"}
         </Button>
       </PageHeading>
+      <IncidentHistory />
       <EventSearch />
       <div className="activity-stats">
         {["critical", "warning", "info"].map((s) => (

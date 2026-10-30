@@ -7,6 +7,7 @@ import {
   matchingActions,
   executionStatus,
   traceWorkflow,
+  workflowTriggerTitle,
 } from "./workflow-engine";
 import type { Event, Workflow, Execution, Integration } from "./types";
 
@@ -47,11 +48,27 @@ export async function readAll<T = any>(
 ): Promise<T[]> {
   const result = await env
     .DB!.prepare(
-      "SELECT data FROM records WHERE owner = ? AND kind = ? ORDER BY created_at DESC LIMIT 2000",
+      "SELECT data FROM records WHERE owner = ? AND kind = ? ORDER BY CASE WHEN kind='events' THEN json_extract(data,'$.timestamp') ELSE created_at END DESC LIMIT 2000",
     )
     .bind(owner, kind)
     .all<{ data: string }>();
   return result.results.map((r) => JSON.parse(r.data));
+}
+/** Compact AI context is fetched in SQL so snapshots and trails never inflate Worker memory. */
+export async function readCameraEvents(owner: string, cameraIds: string[], limit = 80): Promise<Event[]> {
+  if (!cameraIds.length) return [];
+  const placeholders = cameraIds.map(() => "?").join(",");
+  const result = await env.DB!.prepare(`SELECT json_remove(data,'$.snapshot','$.trail','$.spatialState') AS data FROM records WHERE owner=? AND kind='events' AND json_extract(data,'$.cameraId') IN (${placeholders}) ORDER BY json_extract(data,'$.timestamp') DESC LIMIT ?`)
+    .bind(owner, ...cameraIds, Math.max(1,Math.min(80,limit))).all<{data: string}>();
+  return result.results.map(row => JSON.parse(row.data));
+}
+/** Join legacy executions to their event; new executions retain the exact trigger position in the video. */
+export async function readCameraAlerts(owner: string, cameraIds: string[], limit = 20): Promise<Execution[]> {
+  if (!cameraIds.length) return [];
+  const placeholders = cameraIds.map(() => "?").join(",");
+  const result = await env.DB!.prepare(`SELECT x.data, json_extract(e.data,'$.cameraId') AS cameraId FROM records x LEFT JOIN records e ON e.owner=x.owner AND e.kind='events' AND e.id=json_extract(x.data,'$.eventId') WHERE x.owner=? AND x.kind='executions' AND COALESCE(json_extract(x.data,'$.cameraId'),json_extract(e.data,'$.cameraId')) IN (${placeholders}) ORDER BY json_extract(x.data,'$.timestamp') DESC LIMIT ?`)
+    .bind(owner, ...cameraIds, Math.max(1,Math.min(40,limit))).all<{data: string; cameraId: string | null}>();
+  return result.results.map(row => {const alert = JSON.parse(row.data); return {...alert, cameraId: alert.cameraId ?? row.cameraId ?? undefined};});
 }
 export async function readOne<T = any>(
   owner: string,
@@ -96,7 +113,7 @@ export async function ensureSeed(owner: string) {
     workspaceName: "Odin workspace",
     notifications: true,
     voice: false,
-    confidence: 0.65,
+    confidence: 0.5,
     retention: 30,
     model: DEFAULT_GEMINI_MODEL,
   };
@@ -160,6 +177,8 @@ export async function gemini(
   request?: Request,
   image?: string | { image: string; at: number }[],
   json = false,
+  video?: { data: string; mime: string; at: number }[],
+  context?: { incidentId?: string; feature?: string; onModel?: (model: string) => void },
 ) {
   const key = request?.headers.get("x-odin-ai-key") || secret("GEMINI_API_KEY");
   if (!key)
@@ -187,11 +206,34 @@ export async function gemini(
       });
     }
   }
+  if (video) {
+    if (video.length > 8 || video.some(v => !["video/webm", "video/mp4"].includes(v.mime) || v.data.length > 4_000_000 || !/^[A-Za-z0-9+/=]+$/.test(v.data)))
+      throw new ApiError("Use at most eight small video segments.");
+    for (const clip of video) {
+      parts.push({text: `Segment starts at camera time ${clip.at.toFixed(2)} seconds. Treat segments as one ordered incident.`});
+      parts.push({inline_data: {mime_type: clip.mime, data: clip.data}});
+    }
+  }
+  const call = async (selected: string) => {
+    context?.onModel?.(selected);
+    return requestGemini({ model: selected, key, parts, json, maxRetries: 2,
+      onUsage: async (usage) => {
+        try { await save(owner, "ai_usage", {id: crypto.randomUUID(), timestamp: Date.now(), model: selected, feature: context?.feature || (image || video ? "analysis" : "text"), incidentId: context?.incidentId, ...usage}); }
+        catch { console.error("Could not save AI usage counters."); }
+      },
+    });
+  };
   try {
-    return await requestGemini({ model, key, parts, json });
+    return await call(model);
   } catch (error) {
-    if (error instanceof GeminiRequestError)
+    if (error instanceof GeminiRequestError) {
+      // Retry a different model only for service failures, not quotas, permissions or invalid input.
+      if (settings?.fallbackModel && settings.fallbackModel !== model && [500, 502, 503, 504].includes(error.upstreamStatus || 0)) {
+        try { return await call(resolveGeminiModel(settings.fallbackModel)); }
+        catch (fallback) { if (fallback instanceof GeminiRequestError) throw new ApiError(fallback.message, fallback.status); throw fallback; }
+      }
       throw new ApiError(error.message, error.status);
+    }
     throw error;
   }
 }
@@ -422,9 +464,9 @@ async function externalAction(owner: string, node: any, event: Event) {
   if (!r.ok) throw new Error(`Webhook returned HTTP ${r.status}.`);
   return { message: "Webhook delivered.", status: "success" as const };
 }
-export async function runWorkflows(owner: string, event: Event) {
+export async function runWorkflows(owner: string, event: Event, configured?: Workflow[]) {
   if (event.demo) return [];
-  const workflows = await readAll<Workflow>(owner, "workflows");
+  const workflows = configured || await readAll<Workflow>(owner, "workflows");
   const outputs: Execution[] = [];
   for (const flow of workflows.filter((f) => f.enabled)) {
     const actions = matchingActions(flow, event);
@@ -434,7 +476,13 @@ export async function runWorkflows(owner: string, event: Event) {
       workflowId: flow.id,
       workflowName: flow.name,
       eventId: event.id,
-      eventTitle: event.title,
+      eventTitle: workflowTriggerTitle(flow, event),
+      cameraId: event.cameraId,
+      trackId: event.trackId,
+      sourceTime: event.sourceTime,
+      sessionId: event.sessionId,
+      incidentId: event.incidentId,
+      origin: event.origin,
       visitedNodes: traceWorkflow(flow, event),
       timestamp: Date.now(),
       status: "success",
@@ -450,9 +498,12 @@ export async function runWorkflows(owner: string, event: Event) {
         )
         .bind(key, owner, "cooldowns", "{}", now, until, now)
         .first();
-      if (!claim) continue;
+      if (!claim) {
+        if (event.matchedLocalRuleIds?.some(id => id.startsWith(`${flow.id}:`))) execution.results.push({nodeId: node.id, action: node.action || "webhook", status: "skipped", message: "Rule matched, but this action is still in its cooldown. No repeat alert was sent."});
+        continue;
+      }
       try {
-        const result = await externalAction(owner, node, event);
+        const result = await externalAction(owner, node, {...event, title: execution.eventTitle});
         execution.results.push({
           nodeId: node.id,
           action: node.action || "webhook",
