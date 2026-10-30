@@ -1,3 +1,5 @@
+import { DemoVideo } from "@/components/demo-video";
+import { demoCameras, demoTimeline } from "@/lib/demo";
 export default function Welcome() {
   return (
     <main
@@ -111,41 +113,31 @@ export default function Welcome() {
             textAlign: "left",
           }}
         >
-          <video
-            src="/demo/mall.mp4"
-            poster="/demo/mall.jpg"
-            autoPlay
-            loop
-            muted
-            playsInline
-            style={{ width: "100%", borderRadius: 7, background: "black" }}
-          />
+          <div style={{aspectRatio: "16 / 9", position: "relative", overflow: "hidden", borderRadius: 7, alignSelf: "center"}}>
+            <DemoVideo camera={demoCameras[0]} controls />
+          </div>
           <div
             style={{ padding: "15px", background: "white", borderRadius: 7 }}
           >
             <h3 style={{ fontSize: 16, marginBottom: 18 }}>〰 Video Events</h3>
-            {[
-              "A person enters the monitored area.",
-              "A backpack is left unattended.",
-              "A person approaches the backpack.",
-            ].map((s, i) => (
+            {demoTimeline("cam-001").map((event) => (
               <div
-                key={s}
+                key={event.id}
                 style={{
                   fontSize: 12,
                   padding: 12,
                   marginBottom: 8,
-                  border: "1px solid " + (i ? "#fde68a" : "#a7f3d0"),
-                  background: i ? "#fffbeb" : "#ecfdf5",
+                  border: "1px solid " + "#a7f3d0",
+                  background: "#ecfdf5",
                   borderRadius: 4,
                 }}
               >
-                <small>00:{i * 10 + 3}</small>
-                <p style={{ marginTop: 5 }}>{s}</p>
+                <small>00:{String(Math.floor(event.sourceTime || 0)).padStart(2, "0")}</small>
+                <p style={{ marginTop: 5 }}>{event.title}</p>
               </div>
             ))}
             <small style={{ fontSize: 10, color: "#9ca3af" }}>
-              Recorded demonstration with scripted annotations.
+              Recorded object detections with scripted event descriptions.
             </small>
           </div>
         </div>

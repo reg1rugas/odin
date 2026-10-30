@@ -1,0 +1,85 @@
+{
+  "id": "demo-flow-cam-001",
+  "name": "Warehouse Bay 1 workflow",
+  "description": "Demonstration workflow. Browser alerts can be tested without provider credentials.",
+  "enabled": false,
+  "createdAt": 1793390830624,
+  "nodes": [
+    {
+      "id": "video",
+      "type": "input",
+      "title": "Video Input",
+      "description": "Warehouse Bay 1",
+      "cameraId": "cam-001",
+      "x": 60,
+      "y": 150
+    },
+    {
+      "id": "rule-a",
+      "type": "rule",
+      "title": "Detection Rule",
+      "description": "A person is present",
+      "ruleMode": "semantic",
+      "detectionClass": "person",
+      "x": 360,
+      "y": 60
+    },
+    {
+      "id": "rule-b",
+      "type": "rule",
+      "title": "Detection Rule",
+      "description": "Activity near the counter",
+      "ruleMode": "semantic",
+      "detectionClass": "drawer_opening",
+      "x": 360,
+      "y": 240
+    },
+    {
+      "id": "notify",
+      "type": "action",
+      "title": "Action",
+      "description": "Notify the operator",
+      "action": "browser",
+      "cooldown": 60,
+      "x": 680,
+      "y": 60
+    },
+    {
+      "id": "speak",
+      "type": "action",
+      "title": "Action",
+      "description": "Speak the event summary",
+      "action": "voice",
+      "cooldown": 60,
+      "x": 680,
+      "y": 240
+    }
+  ],
+  "edges": [
+    {
+      "id": "a",
+      "source": "video",
+      "target": "rule-a"
+    },
+    {
+      "id": "b",
+      "source": "video",
+      "target": "rule-b"
+    },
+    {
+      "id": "c",
+      "source": "rule-a",
+      "target": "notify"
+    },
+    {
+      "id": "d",
+      "source": "rule-a",
+      "target": "speak"
+    },
+    {
+      "id": "e",
+      "source": "rule-b",
+      "target": "notify"
+    }
+  ]
+}

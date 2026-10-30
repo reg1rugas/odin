@@ -19,7 +19,7 @@ Open **http://localhost:5173** and choose **Sign in to Odin**. Run the commands 
 
 Local development uses a loopback-only test identity. Use `localhost` or `127.0.0.1` directly; opening the app through a LAN address does not enable local sign-in. Production uses hosted ChatGPT sign-in and a private site access policy.
 
-The first sign-in creates six playable demonstration cameras, sample events, and paused workflow templates. Demonstration clips have explicitly scripted playback annotations; they do not call AI or send external actions. The public introduction is at `/welcome`.
+The first sign-in creates six playable demonstration cameras, sample events, and paused workflow templates. Demonstration clips include recorded object-detection boxes and explicitly scripted event descriptions; playback does not run live inference, call AI providers, or send external actions. Footage sources and annotation details are in [demo credits](public/demo/CREDITS.md). The public introduction is at `/welcome`.
 
 ### Try a real detection
 

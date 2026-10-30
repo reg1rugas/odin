@@ -46,4 +46,4 @@ A public repository includes its Git history. Review that history for credential
 - Setup instructions: the repository README
 - Demo: add the separately hosted demo video URL to Devpost
 
-Confirm the repository is accessible while signed out before submitting its link to the hackathon. Choose a source license and confirm redistribution rights for included demo footage before describing the project as open source; making source publicly viewable does not itself grant an open-source license.
+Confirm the repository is accessible while signed out before submitting its link to the hackathon. Demo footage attribution and its separate Pexels terms are recorded in `public/demo/CREDITS.md`. Choose a source license before describing the project code as open source; making source publicly viewable does not itself grant an open-source license.

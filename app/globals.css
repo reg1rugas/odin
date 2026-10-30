@@ -5897,3 +5897,10 @@ svg {
     font-size: 9px;
   }
 }
+
+/* Recorded sample clips share the live monitor's labels and box treatment. */
+.demo-video { position: absolute; inset: 0; overflow: hidden; }
+.demo-video > video { width: 100%; height: 100%; display: block; object-fit: contain; }
+.demo-detection-layer { overflow: hidden; }
+.demo-detection-layer .live-box > span { bottom: auto; top: 0; left: 0; font-size: clamp(7px, .75vw, 10px); line-height: 1.3; }
+.demo-overlay-error { position: absolute; bottom: 4px; left: 4px; background: #111c; color: white; padding: 4px; }

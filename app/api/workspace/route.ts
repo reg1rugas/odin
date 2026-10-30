@@ -1,4 +1,4 @@
-import { demoCameras, demoWorkflow } from "@/lib/demo";
+import { demoWorkflow, seedDemoEvents, upgradeDemoCamera, isUntouchedLegacyDemoWorkflow } from "@/lib/demo";
 import { save } from "@/lib/server";
 import {
   identity,
@@ -14,21 +14,28 @@ export async function GET() {
     const user = await identity();
     await ensureSeed(user.userId);
     const settings = await readOne(user.userId, "settings", "workspace");
-    // Upgrade only built-in demonstration records; never replace user camera sources.
+    // Version the built-in samples so existing workspaces receive new footage too.
     const cameraRecords = await readAll(user.userId, "cameras");
-    for (const camera of cameraRecords.filter(
-      (c) => c.source === "demo" && !c.url,
-    )) {
-      const upgraded = demoCameras.find((c) => c.id === camera.id);
-      if (upgraded) {
-        await save(user.userId, "cameras", {
-          ...upgraded,
-          createdAt: camera.createdAt,
-        });
-        const flow = demoWorkflow(upgraded);
-        if (!(await readOne(user.userId, "workflows", flow.id)))
-          await save(user.userId, "workflows", flow);
+    const upgradedIds = new Set<string>();
+    for (const camera of cameraRecords) {
+      const upgraded = upgradeDemoCamera(camera);
+      if (!upgraded) continue;
+      await save(user.userId, "cameras", upgraded);
+      upgradedIds.add(camera.id);
+      const flow = demoWorkflow(upgraded);
+      const existing = await readOne(user.userId, "workflows", flow.id);
+      // Preserve activated or edited workflows; only refresh untouched sample templates.
+      if (!existing || await isUntouchedLegacyDemoWorkflow(existing))
+        await save(user.userId, "workflows", flow);
+    }
+    if (upgradedIds.size) {
+      const events = await readAll(user.userId, "events");
+      for (const event of events) {
+        if (event.demo && event.id.startsWith("evt-demo-") && upgradedIds.has(event.cameraId))
+          await env.DB!.prepare("DELETE FROM records WHERE owner=? AND kind='events' AND id=?").bind(user.userId, event.id).run();
       }
+      for (const event of seedDemoEvents(Date.now()).filter(event => upgradedIds.has(event.cameraId)))
+        await save(user.userId, "events", event);
     }
     // Enforce retention on every workspace load, including inactive camera histories.
     const cutoff = Date.now() - (settings?.retention || 30) * 86400000;

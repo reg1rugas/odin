@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { DemoVideo } from "./demo-video";
 import { IncidentHistory } from "./incident-history";
 import { EventSearch } from "./event-search";
 import {
@@ -126,7 +127,9 @@ export function Dashboard({
               onClick={() => onCamera(camera.id)}
               aria-label={`Open ${camera.name}`}
             >
-              {camera.url && camera.source !== "webcam" ? (
+              {camera.source === "demo" ? (
+                <DemoVideo camera={camera} />
+              ) : camera.url && camera.source !== "webcam" ? (
                 <video
                   src={camera.url}
                   poster={camera.thumbnail}
@@ -158,7 +161,7 @@ export function Dashboard({
             <div className="classic-camera-status">
               <span className="status-dot" />
               {camera.source === "demo"
-                ? "Recorded demo · annotations included"
+                ? "Recorded footage · labeled detections"
                 : "Ready to monitor"}
               <button onClick={() => onCamera(camera.id)}>
                 Open <ChevronRight size={13} />

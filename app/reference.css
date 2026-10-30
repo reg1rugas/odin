@@ -250,7 +250,7 @@
 .reference-ui .classic-camera-feed {
   position: relative;
   width: 100%;
-  aspect-ratio: 1.43;
+  aspect-ratio: 16 / 9;
   background: #000;
   display: block;
   padding: 0;
@@ -351,7 +351,7 @@
   padding: 11px 12px;
 }
 .reference-ui .video-stage {
-  aspect-ratio: 1.43;
+  aspect-ratio: 16 / 9;
   margin: 0 10px;
   background: #000;
   border-radius: 4px;

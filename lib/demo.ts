@@ -3,72 +3,78 @@ import type { Camera, Event, Workflow } from "./types";
 export const demoCameras: Camera[] = [
   {
     id: "cam-001",
-    name: "Warehouse Bay 1",
-    location: "Dock B",
+    name: "Warehouse Aisle",
+    location: "Inventory · Aisle 01",
     category: "Warehouse",
     source: "demo",
-    url: "/demo/warehouse.mp4",
-    thumbnail: "/demo/warehouse.jpg",
+    demoRevision: 2,
+    url: "/demo/warehouse-v2.mp4",
+    thumbnail: "/demo/warehouse-v2.jpg",
     status: "online",
     enabled: true,
     createdAt: 0,
   },
   {
     id: "cam-002",
-    name: "Mall Sector A",
-    location: "North-East Corner",
+    name: "Mall Concourse",
+    location: "Atrium · Upper Level",
     category: "Retail",
     source: "demo",
-    url: "/demo/mall.mp4",
-    thumbnail: "/demo/mall.jpg",
+    demoRevision: 2,
+    url: "/demo/mall-v2.mp4",
+    thumbnail: "/demo/mall-v2.jpg",
     status: "online",
     enabled: true,
     createdAt: 0,
   },
   {
     id: "cam-003",
-    name: "Living Room",
-    location: "Home",
-    category: "Home",
+    name: "Park Promenade",
+    location: "Shared walking & cycling path",
+    category: "Outdoor",
     source: "demo",
-    url: "/demo/room.mp4",
-    thumbnail: "/demo/room.jpg",
+    demoRevision: 2,
+    url: "/demo/park-v2.mp4",
+    thumbnail: "/demo/park-v2.jpg",
     status: "online",
     enabled: true,
     createdAt: 0,
   },
   {
     id: "cam-004",
-    name: "Retail Store",
-    location: "Sunnyvale Mall",
+    name: "Supermarket Aisle",
+    location: "Grocery · Chilled Section",
     category: "Retail",
     source: "demo",
-    url: "/demo/retail.mp4",
-    thumbnail: "/demo/retail.jpg",
+    demoRevision: 2,
+    url: "/demo/retail-v2.mp4",
+    thumbnail: "/demo/retail-v2.jpg",
     status: "online",
     enabled: true,
     createdAt: 0,
   },
   {
     id: "cam-005",
-    name: "Elderly Care Room 101",
-    location: "Sunnyvale Home",
-    category: "Healthcare",
+    name: "City Intersection",
+    location: "Street · Traffic Approach",
+    category: "Traffic",
     source: "demo",
-    url: "/demo/elder.mp4",
-    thumbnail: "/demo/elder.jpg",
+    demoRevision: 2,
+    url: "/demo/traffic-v2.mp4",
+    thumbnail: "/demo/traffic-v2.jpg",
     status: "online",
     enabled: true,
     createdAt: 0,
   },
   {
     id: "cam-006",
-    name: "Manufacturing Line 3",
-    location: "Chengdu Factory",
+    name: "Factory Workshop",
+    location: "Machining · Lathe Station",
     category: "Industrial",
     source: "demo",
-    url: "/demo/production.mp4",
-    thumbnail: "/demo/production.jpg",
+    demoRevision: 2,
+    url: "/demo/factory-v2.mp4",
+    thumbnail: "/demo/factory-v2.jpg",
     status: "online",
     enabled: true,
     createdAt: 0,
@@ -76,60 +82,34 @@ export const demoCameras: Camera[] = [
 ];
 const scripts: Record<string, [number, string, Event["severity"], string][]> = {
   "cam-001": [
-    [
-      0,
-      "Several people are standing and moving around in a warehouse.",
-      "info",
-      "person",
-    ],
-    [
-      4,
-      "People are grouped around a table and near stacks of boxes.",
-      "info",
-      "person",
-    ],
+    [0, "A worker is visible between the warehouse racks.", "info", "person"],
+    [1.5, "Another worker moves a pallet jack across the aisle.", "info", "person"],
+    [7, "A worker moves toward the foreground with a tablet.", "info", "person"],
   ],
   "cam-002": [
-    [
-      8,
-      "A person enters the main floor area from the top left.",
-      "info",
-      "person",
-    ],
-    [
-      16,
-      "The person exits to the right, leaving a backpack unattended.",
-      "warning",
-      "unattended_bag",
-    ],
-    [
-      23,
-      "A person approaches the unattended backpack.",
-      "warning",
-      "approaching_bag",
-    ],
-    [
-      27,
-      "The person picks up the unattended backpack.",
-      "critical",
-      "bag_pickup",
-    ],
+    [0, "Shoppers are visible throughout the mall concourse.", "info", "person"],
+    [4, "People move along the upper-level walkway.", "info", "person"],
+    [10, "Foot traffic continues around the atrium.", "info", "person"],
+  ],
+  "cam-003": [
+    [0, "A cyclist and a pedestrian share the park path.", "info", "person"],
+    [1, "Bicycles travel along the tree-lined promenade.", "info", "bicycle"],
+    [5, "A dog is visible beside a person in the foreground.", "info", "dog"],
   ],
   "cam-004": [
-    [0, "People are seen on both sides of a counter.", "warning", "person"],
-    [
-      2,
-      "A physical struggle is visible near the counter.",
-      "critical",
-      "physical_struggle",
-    ],
-    [4, "A person jumps over the counter.", "critical", "counter_crossing"],
-    [
-      6,
-      "A person behind the counter is opening drawers.",
-      "critical",
-      "drawer_opening",
-    ],
+    [0, "A shopper browses the chilled grocery shelves.", "info", "person"],
+    [2, "The shopper reaches toward products on the shelf.", "info", "person"],
+    [5, "The shopper moves farther down the aisle.", "info", "person"],
+  ],
+  "cam-005": [
+    [0, "Pedestrians are visible beside the intersection.", "info", "person"],
+    [4, "A car enters the foreground of the street view.", "info", "car"],
+    [11, "A bus passes through the background.", "info", "bus"],
+  ],
+  "cam-006": [
+    [0, "A worker is visible at the lathe station.", "info", "person"],
+    [5, "The worker adjusts the machinery at the workstation.", "info", "person"],
+    [11, "The worker continues operating at the same station.", "info", "person"],
   ],
 };
 export function demoTimeline(cameraId: string): Event[] {
@@ -153,17 +133,12 @@ export function demoTimeline(cameraId: string): Event[] {
   }));
 }
 export function demoWorkflow(camera: Camera): Workflow {
-  const mall = camera.id === "cam-002";
-  const cls = mall
-    ? "bag_pickup"
-    : camera.id === "cam-004"
-      ? "physical_struggle"
-      : "person";
+  const secondary = camera.id === "cam-003" ? "bicycle" : camera.id === "cam-005" ? "car" : "person";
   return {
     id: `demo-flow-${camera.id}`,
     name: `${camera.name} workflow`,
     description:
-      "Demonstration workflow. Browser alerts can be tested without provider credentials.",
+      "Recorded detection preview. Playback highlights the graph without sending notifications.",
     enabled: false,
     createdAt: Date.now(),
     nodes: [
@@ -180,13 +155,9 @@ export function demoWorkflow(camera: Camera): Workflow {
         id: "rule-a",
         type: "rule",
         title: "Detection Rule",
-        description: mall
-          ? "A person picks up an unattended bag"
-          : camera.id === "cam-004"
-            ? "A physical struggle is visible"
-            : "A person is present",
-        ruleMode: "semantic",
-        detectionClass: cls,
+        description: "A person is visible in the camera frame",
+        ruleMode: "object",
+        detectionClass: "person",
         x: 360,
         y: 60,
       },
@@ -194,11 +165,9 @@ export function demoWorkflow(camera: Camera): Workflow {
         id: "rule-b",
         type: "rule",
         title: "Detection Rule",
-        description: mall
-          ? "A bag is left unattended"
-          : "Activity near the counter",
-        ruleMode: "semantic",
-        detectionClass: mall ? "unattended_bag" : "drawer_opening",
+        description: secondary === "person" ? "Person activity in the monitored area" : `A ${secondary} is visible in the camera frame`,
+        ruleMode: "object",
+        detectionClass: secondary,
         x: 360,
         y: 240,
       },
@@ -231,4 +200,43 @@ export function demoWorkflow(camera: Camera): Workflow {
       { id: "e", source: "rule-b", target: "notify" },
     ],
   };
+}
+
+/** Refresh built-in footage only; retain user-added cameras and local preferences. */
+export function upgradeDemoCamera(camera: Camera): Camera | null {
+  const current = demoCameras.find(sample => sample.id === camera.id);
+  if (camera.source !== "demo" || !current || camera.demoRevision === current.demoRevision) return null;
+  return {...camera, ...current, createdAt: camera.createdAt, enabled: camera.enabled};
+}
+
+export function seedDemoEvents(now: number): Event[] {
+  return demoCameras.flatMap((camera, cameraIndex) => demoTimeline(camera.id).map((event, index) => ({
+    ...event,
+    id: `evt-sample-v2-${camera.id}-${index}`,
+    timestamp: now - (cameraIndex * 3 + index + 1) * 60000,
+  })));
+}
+
+// Exact fingerprints of the six original sample templates, excluding creation time.
+// Any user edit changes the fingerprint and prevents replacement.
+const legacyWorkflowHashes: Record<string, string> = {
+  "demo-flow-cam-001": "7021902cf1050ee2a76e046364291c5d17c6d189bd9dc49703f4b4d92a806514",
+  "demo-flow-cam-002": "00b43f94a447494cfb3ada23bf4aa3543e4e20a870fc16be28e3f7917380aca0",
+  "demo-flow-cam-003": "88879463a872847c0e0b8e48c5e3c670c8ccaa13b00f17c9085e3bd1a4e58b81",
+  "demo-flow-cam-004": "363b5e97f01f2c6338576d80a13380c37ca4297d31b0106ee031b625e03b0301",
+  "demo-flow-cam-005": "a54d1783eaba6805ecd564be208fc92850308b1178cd51aeb78a246c177e0486",
+  "demo-flow-cam-006": "31fbca3424c8207f18c9590ec8f18944afe7bc127f162e42a5cd7cc9ad13a171"
+};
+export async function isUntouchedLegacyDemoWorkflow(workflow: Workflow): Promise<boolean> {
+  const expected = legacyWorkflowHashes[workflow.id];
+  if (!expected || workflow.enabled) return false;
+  const canonical = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value && typeof value === "object")
+      return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, item]) => [key, canonical(item)]));
+    return value;
+  };
+  const {createdAt: _createdAt, ...content} = workflow;
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(canonical(content))));
+  return Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, "0")).join("") === expected;
 }

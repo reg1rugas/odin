@@ -789,3 +789,72 @@ test("newly enabled spatial rules retain a recent already-inside baseline withou
   const outside={...previous,position:{x:0.7,y:0.5,at:1000}};
   assert.deepEqual(evaluateSpatialRules([make("zone_exit",zone)],current,outside).matches,[]);
 });
+
+test("recorded demo boxes follow media time across interpolation, seeks, and loops", async () => {
+  const { sampleDemoBoxes } = await import("../lib/demo-playback.ts");
+  const box = {id: "person-01", class: "person", score: 0.9, bbox: [0.1, 0.2, 0.2, 0.5]};
+  const frames = [{time: 0, boxes: [box]}, {time: 0.2, boxes: [{...box, bbox: [0.3, 0.2, 0.2, 0.5]}]}, {time: 0.4, boxes: []}];
+  assert.equal(sampleDemoBoxes(frames, 0.1)[0].bbox[0], 0.2);
+  assert.deepEqual(sampleDemoBoxes(frames, 0.4), []);
+  assert.deepEqual(sampleDemoBoxes(frames, 0), [box]);
+  assert.deepEqual(sampleDemoBoxes(frames, 5), []);
+  assert.deepEqual(sampleDemoBoxes(frames, -1), []);
+  assert.deepEqual(sampleDemoBoxes(frames, NaN), []);
+  assert.deepEqual(sampleDemoBoxes([], 0), []);
+});
+
+test("demo upgrades refresh only known sample cameras and preserve capture preferences", async () => {
+  const { demoCameras, upgradeDemoCamera } = await import("../lib/demo.ts");
+  const original = {...demoCameras[0], demoRevision: undefined, name: "Warehouse Bay 1", url: "/demo/warehouse.mp4", createdAt: 123, enabled: false};
+  const upgraded = upgradeDemoCamera(original);
+  assert.equal(upgraded.name, "Warehouse Aisle");
+  assert.equal(upgraded.demoRevision, 2);
+  assert.equal(upgraded.createdAt, 123);
+  assert.equal(upgraded.enabled, false);
+  assert.equal(upgradeDemoCamera(upgraded), null);
+  assert.equal(upgradeDemoCamera({...original, source: "upload"}), null);
+  assert.equal(upgradeDemoCamera({...original, id: "user-camera"}), null);
+});
+
+test("every demo has matching assets, bounded detections, and events within its playback", async () => {
+  const { readFileSync, existsSync } = await import("node:fs");
+  const { demoCameras, demoTimeline, demoWorkflow, seedDemoEvents } = await import("../lib/demo.ts");
+  const { cameras } = JSON.parse(readFileSync(new URL("../public/demo/detections-v2.json", import.meta.url)));
+  assert.equal(demoCameras.length, 6);
+  for (const camera of demoCameras) {
+    for (const asset of [camera.url, camera.thumbnail]) assert.ok(existsSync(new URL(`../public${asset}`, import.meta.url)));
+    const frames = cameras[camera.id];
+    assert.ok(frames.length > 10);
+    assert.ok(frames.some(frame => frame.boxes.length));
+    for (let index = 0; index < frames.length; index++) {
+      if (index) assert.ok(frames[index].time > frames[index - 1].time);
+      const ids = new Set();
+      for (const box of frames[index].boxes) {
+        assert.ok(!ids.has(box.id));
+        ids.add(box.id);
+        assert.ok(box.score >= 0.5 && box.score <= 1);
+        const [x, y, width, height] = box.bbox;
+        assert.ok(x >= 0 && y >= 0 && width > 0 && height > 0 && x + width <= 1.0001 && y + height <= 1.0001);
+      }
+    }
+    const flow = demoWorkflow(camera);
+    assert.equal(flow.enabled, false);
+    for (const event of demoTimeline(camera.id)) {
+      assert.ok(event.sourceTime >= 0 && event.sourceTime <= frames.at(-1).time + 0.3);
+      assert.ok(event.demo);
+      assert.deepEqual(matchingActions({...flow, enabled: true}, event), []);
+    }
+  }
+  assert.equal(new Set(seedDemoEvents(100000).map(event => event.id)).size, 18);
+});
+
+test("demo template migration recognizes exact defaults and preserves edited workflows", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { isUntouchedLegacyDemoWorkflow } = await import("../lib/demo.ts");
+  const flow = JSON.parse(readFileSync(new URL("./fixtures/legacy-demo-workflow.json", import.meta.url)));
+  assert.equal(await isUntouchedLegacyDemoWorkflow(flow), true);
+  assert.equal(await isUntouchedLegacyDemoWorkflow({...flow, createdAt: 99}), true);
+  assert.equal(await isUntouchedLegacyDemoWorkflow({...flow, enabled: true}), false);
+  assert.equal(await isUntouchedLegacyDemoWorkflow({...flow, name: "My workflow"}), false);
+  assert.equal(await isUntouchedLegacyDemoWorkflow({...flow, nodes: flow.nodes.map(node => node.id === "rule-a" ? {...node, description: "Custom detection condition"} : node)}), false);
+});

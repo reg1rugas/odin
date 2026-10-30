@@ -4,6 +4,7 @@ export type Camera = {
   location: string;
   category: string;
   source: "demo" | "url" | "upload" | "webcam";
+  demoRevision?: number;
   url: string;
   thumbnail: string;
   status: "online" | "offline";

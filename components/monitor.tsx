@@ -22,6 +22,7 @@ import {
   Mic,
   Volume2,
 } from "lucide-react";
+import { DemoOverlay } from "./demo-video";
 import { WorkflowAlerts } from "./workflow-alerts";
 import { useIncidentMonitor } from "./use-incident-monitor";
 import { useOdin } from "./odin-context";
@@ -664,6 +665,7 @@ export function Monitor({
                 </Button>
               </div>
             )}
+            {demo && <DemoOverlay cameraId={camera.id} videoRef={video} />}
             {started && !demo && (
               <div
                 className="detection-layer"
@@ -717,7 +719,7 @@ export function Monitor({
               )}
               <span className="muted">
                 {demo
-                  ? "Scripted sample annotations · no outbound actions"
+                  ? "Recorded detections + scripted events · no outbound actions"
                   : recording
                     ? "Recording…"
                     : modelState || "Ready"}
@@ -814,7 +816,7 @@ export function Monitor({
             </>
           )}
           {started && !demo && <p className="muted">{!objects ? "Enable object detection to evaluate line and zone rules." : spatialRules.length ? `${spatialRules.length} active spatial rules · yellow regions, cyan object centers. Crossing and exit use the center, not the box edge.` : "No active line or zone rules for this camera. Save and enable a connected workflow to activate them."}</p>}
-          <WorkflowAlerts cameraIds={[camera.id]} />
+          {demo ? <p className="analysis-summary">Recorded boxes and scripted events preview the workflow graph. Demo playback never sends alerts. Connect your own camera or upload footage to run live detection and automation.</p> : <WorkflowAlerts cameraIds={[camera.id]} />}
           {error && (
             <div className="inline-error">
               <TriangleAlert size={15} />
@@ -972,8 +974,7 @@ export function Monitor({
             </Badge>
             <p>{previewEvent.description}</p>
             <small>
-              {previewEvent.matchedRuleIds?.length || 0} semantic rule matches ·{" "}
-              {Math.round(previewEvent.confidence * 100)}% reported confidence
+              {demo ? "Scripted event · recorded object boxes" : <>{previewEvent.matchedRuleIds?.length || 0} semantic rule matches · {Math.round(previewEvent.confidence * 100)}% reported confidence</>}
             </small>
           </div>
         ) : (
